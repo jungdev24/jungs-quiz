@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jung's Quiz</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Pretendard', -apple-system, 'Segoe UI', sans-serif; background: #f7f8fa; color: #191f28; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+
+  header { background: #191f28; padding: 0; position: sticky; top: 0; z-index: 100; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; max-width: 820px; margin: 0 auto; padding: 0 1rem; }
+  header h1 { font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; padding: 0.65rem 0; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50vw; }
+  header h1 span { font-weight: 400; opacity: 0.5; font-size: 0.82rem; margin-left: 0.5rem; }
+
+  .top-nav { display: none; flex-wrap: wrap; gap: 0.3rem; padding: 0.6rem 1rem; background: #fff; border-bottom: 1px solid #f2f4f6; max-width: 820px; margin: 0 auto; }
+  .top-nav.show { display: flex; }
+  .top-nav-btn { padding: 0.4rem 0.7rem; border: none; background: #f2f4f6; color: #6b7684; font-size: 0.78rem; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.15s; white-space: nowrap; }
+  .top-nav-btn:hover { background: #e5e8eb; color: #4e5968; }
+  .top-nav-btn.active { background: #3182f6; color: #fff; }
+
+  .top-nav-mobile { display: none !important; padding: 0.6rem 1rem; background: #fff; border-bottom: 1px solid #f2f4f6; max-width: 820px; margin: 0 auto; }
+
+  @media (max-width: 640px) {
+    .header-top { padding: 0 0.8rem; }
+    header h1 { font-size: 0.9rem; }
+    .top-nav.show { display: none !important; }
+    .top-nav-mobile.show { display: block !important; }
+    .day-header { display: none; }
+    .quiz-type-tag { display: none !important; }
+    .tabs { margin-bottom: 0.4rem; margin-top: 0; }
+    .tab-btn { padding: 0.35rem 0.8rem; }
+    .container { padding: 0.5rem 0.8rem; }
+    .card { margin-bottom: 0.8rem; }
+    .top-nav-mobile { border-bottom: none; }
+    .top-nav-mobile { padding: 0.5rem 0.8rem; }
+    .container { padding: 1rem 0.8rem; }
+    .card { padding: 1.2rem; border-radius: 14px; }
+    .day-header h2 { font-size: 1.1rem; }
+    .tabs { gap: 0.3rem; }
+    .tab-btn { padding: 0.45rem 1rem; font-size: 0.82rem; }
+    .quiz-sentence { font-size: 0.95rem; padding: 0.8rem 1rem; }
+    .option-btn { padding: 0.7rem 0.8rem; font-size: 0.88rem; }
+    .subject-select h2 { font-size: 1.2rem; }
+    .subject-card { padding: 1.2rem; }
+    .subject-card h3 { font-size: 1rem; }
+  }
+
+  .container { max-width: 820px; margin: 0 auto; padding: 1.5rem 1rem; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .day-header { margin-bottom: 1.5rem; }
+  .day-header h2 { font-size: 1.3rem; font-weight: 800; color: #191f28; letter-spacing: -0.02em; }
+  .day-header p { font-size: 0.9rem; color: #8b95a1; margin-top: 0.2rem; }
+
+  .tabs { display: flex; gap: 0.4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tab-btn { padding: 0.55rem 1.5rem; border: none; background: #f2f4f6; color: #6b7684; border-radius: 10px; cursor: pointer; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; }
+  .tab-btn:hover { background: #e5e8eb; color: #4e5968; }
+  .tab-btn.active { background: #3182f6; color: #fff; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .card { background: #fff; border-radius: 16px; padding: 1.6rem; margin-bottom: 1.2rem; box-shadow: 0 1px 8px rgba(0,0,0,0.04); border: none; }
+
+  .quiz-progress { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
+  .progress-bar { flex: 1; height: 6px; background: #f2f4f6; border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #3182f6; border-radius: 999px; transition: width 0.4s; }
+  .progress-text { font-size: 0.82rem; color: #8b95a1; font-weight: 600; white-space: nowrap; }
+
+  .quiz-type-tag { display: none; }
+  .quiz-type-tag.writing { background: #f0fdf4; color: #16a34a; }
+  .quiz-type-tag.vocab { background: #fef3c7; color: #b45309; }
+  .quiz-type-tag.tf { background: #fce7f3; color: #db2777; }
+  .quiz-type-tag.ordering { background: #ede9fe; color: #7c3aed; }
+  .quiz-type-tag.matching { background: #ecfdf5; color: #059669; }
+
+  .quiz-question { font-size: 1rem; font-weight: 600; margin-bottom: 0.8rem; color: #4e5968; }
+  .quiz-sentence { background: #f7f8fa; padding: 1rem 1.2rem; border-radius: 12px; font-size: 1.08rem; text-align: center; margin-bottom: 1rem; border: none; line-height: 1.6; position: relative; }
+  .quiz-sentence .ko { font-size: 0.88rem; color: #8b95a1; margin-top: 0.3rem; }
+  .quiz-sentence .tts-btn { position: absolute; top: 0.5rem; right: 0.5rem; }
+  .blank { display: inline-block; min-width: 60px; border-bottom: 2px solid #3182f6; color: #3182f6; font-weight: 700; }
+
+  .options { display: grid; gap: 0.5rem; }
+  .option-btn { padding: 0.8rem 1rem; border: none; background: #f2f4f6; border-radius: 12px; cursor: pointer; font-size: 0.95rem; text-align: left; transition: all 0.15s; }
+  .option-btn:hover:not(:disabled) { background: #e8f0fe; color: #3182f6; }
+  .option-btn.correct { background: #f0fdf4; color: #16a34a; font-weight: 600; }
+  .option-btn.wrong { background: #fef2f2; color: #f04452; font-weight: 600; }
+  .option-btn:disabled { cursor: default; }
+
+  .write-area { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
+  .write-input { flex: 1; padding: 0.75rem 1rem; border: none; background: #f2f4f6; border-radius: 12px; font-size: 1rem; outline: none; transition: all 0.2s; }
+  .write-input:focus { background: #e8f0fe; }
+  .write-input:disabled { background: #f2f4f6; color: #8b95a1; }
+  .check-btn { padding: 0.75rem 1.4rem; background: #3182f6; color: #fff; border: none; border-radius: 12px; font-size: 0.92rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+  .check-btn:hover:not(:disabled) { background: #1b64da; }
+  .check-btn:disabled { background: #d5dae0; cursor: default; }
+
+  .feedback { margin-top: 0.8rem; padding: 0.9rem 1rem; border-radius: 12px; display: none; font-size: 0.92rem; }
+  .feedback.show { display: block; }
+  .feedback.correct { background: #f0fdf4; border: none; color: #16a34a; }
+  .feedback.wrong { background: #fef2f2; border: none; color: #f04452; }
+  .feedback .tts-btn { margin-left: 0.5rem; }
+
+  .next-btn { display: none; margin-top: 1rem; padding: 0.65rem 1.8rem; background: #191f28; color: #fff; border: none; border-radius: 10px; font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .next-btn:hover { background: #333d4b; }
+  .next-btn.show { display: inline-block; }
+
+  .result { text-align: center; padding: 2.5rem 1rem; }
+  .result .score { font-size: 3rem; font-weight: 800; color: #191f28; }
+  .result .score span { font-size: 1.2rem; color: #8b95a1; font-weight: 400; }
+  .result .msg { font-size: 1.05rem; color: #6b7684; margin: 0.5rem 0 1.5rem; }
+  .result .emoji { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  .retry-btn { padding: 0.65rem 1.8rem; background: #191f28; color: #fff; border: none; border-radius: 10px; font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .retry-btn:hover { background: #333d4b; }
+
+  /* ── Login Screen ─────────────────────────────────────── */
+  .login-overlay {
+    position: fixed; inset: 0; background: #f7f8fa; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-overlay.hidden { display: none; }
+  .login-box {
+    text-align: center; padding: 2.5rem; max-width: 380px; width: 100%; margin: 0 1rem;
+    background: #fff; border-radius: 20px; box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+  }
+  .login-box h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.3rem; color: #191f28; letter-spacing: -0.02em; }
+  .login-box .sub { font-size: 0.88rem; color: #8b95a1; margin-bottom: 2rem; }
+  .login-box input {
+    width: 100%; padding: 0.85rem 1rem; border: none; background: #f2f4f6; border-radius: 12px;
+    font-size: 0.95rem; outline: none; text-align: center; margin-bottom: 0.7rem; transition: all 0.2s;
+  }
+  .login-box input:focus { background: #e8f0fe; }
+  .login-box button {
+    width: 100%; padding: 0.85rem; background: #3182f6; color: #fff; border: none;
+    border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
+  }
+  .login-box button:hover { background: #1b64da; }
+  .login-box button:disabled { background: #d5dae0; cursor: default; }
+  .login-box .error { color: #f04452; font-size: 0.82rem; margin-top: 0.5rem; display: none; }
+  .login-box .loading { color: #8b95a1; font-size: 0.82rem; margin-top: 0.5rem; display: none; }
+
+  .user-badge {
+    background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); padding: 0.3rem 0.7rem;
+    border-radius: 8px; font-size: 0.78rem; font-weight: 600; white-space: nowrap;
+  }
+
+  .submit-status {
+    text-align: center; font-size: 0.85rem; margin-top: 0.5rem; padding: 0.4rem;
+    border-radius: 8px;
+  }
+  .submit-status.sending { color: #8b95a1; }
+  .submit-status.sent { color: #00c471; }
+  .submit-status.failed { color: #f04452; }
+
+  /* ── TTS Speaker Button ────────────────────────────────── */
+  .tts-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border: none; background: #f2f4f6;
+    border-radius: 10px; cursor: pointer; font-size: 1.1rem; transition: all 0.15s;
+    vertical-align: middle; margin-left: 0.4rem; flex-shrink: 0;
+  }
+  .tts-btn:hover { background: #e8f0fe; }
+  .tts-btn.speaking { background: #e8f0fe; animation: tts-pulse 1s infinite; }
+  @keyframes tts-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  /* ── Vocab Section ─────────────────────────────────────── */
+  .vocab-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .vocab-card {
+    background: #f7f8fa; border: none; border-radius: 12px;
+    padding: 1rem 1.2rem; display: flex; align-items: center; gap: 0.8rem;
+    transition: all 0.15s;
+  }
+  .vocab-card:hover { background: #f2f4f6; }
+  .vocab-num { font-size: 0.78rem; font-weight: 700; color: #b0b8c1; min-width: 1.5rem; text-align: center; }
+  .vocab-info { flex: 1; min-width: 0; }
+  .vocab-en { font-size: 1.05rem; font-weight: 700; color: #191f28; }
+  .vocab-ko { font-size: 0.88rem; color: #8b95a1; margin-top: 0.1rem; }
+  .vocab-ex { font-size: 0.82rem; color: #b0b8c1; margin-top: 0.25rem; font-style: italic; }
+  .vocab-card .tts-btn { flex-shrink: 0; }
+
+  /* ── Wrong Answers Review ──────────────────────────────── */
+  .review-toggle {
+    display: inline-block; margin-top: 1rem; padding: 0.55rem 1.4rem;
+    border: none; background: #f2f4f6; color: #4e5968; border-radius: 10px;
+    font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .review-toggle:hover { background: #fef2f2; color: #f04452; }
+  .review-list { margin-top: 1rem; text-align: left; }
+  .review-item {
+    background: #fef2f2; border: none; border-radius: 12px;
+    padding: 0.8rem 1rem; margin-bottom: 0.6rem; font-size: 0.9rem;
+  }
+  .review-item .review-q { color: #f04452; font-weight: 600; margin-bottom: 0.3rem; }
+  .review-item .review-a { color: #00c471; font-weight: 600; }
+  .review-item .review-hint { color: #8b95a1; font-size: 0.82rem; margin-top: 0.2rem; }
+  .review-item .tts-btn { width: 30px; height: 30px; font-size: 0.9rem; }
+
+  /* ── Subject Selection ─────────────────────────────────── */
+  .subject-select {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 60vh; padding: 2rem;
+  }
+  .subject-select h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; letter-spacing: -0.02em; color: #191f28; }
+  .subject-grid { display: grid; gap: 0.8rem; width: 100%; max-width: 500px; }
+  .subject-card {
+    background: #fff; border: none; border-radius: 16px;
+    padding: 1.5rem; cursor: pointer; transition: all 0.15s; text-align: center;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.04);
+  }
+  .subject-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  .subject-card h3 { font-size: 1.1rem; font-weight: 700; color: #191f28; }
+  .subject-card p { font-size: 0.85rem; color: #8b95a1; margin-top: 0.3rem; }
+
+  /* ── Loading ────────────────────────────────────────────── */
+  .loading-screen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 50vh; color: #8b95a1;
+  }
+  .spinner { width: 36px; height: 36px; border: 3px solid #f2f4f6; border-top-color: #3182f6; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+  /* ── Ordering Quiz ─────────────────────────────────────── */
+  .order-items { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+  .order-item {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.8rem 1rem; background: #f2f4f6; border: none;
+    border-radius: 12px; cursor: grab; transition: all 0.15s; user-select: none;
+  }
+  .order-item:active { cursor: grabbing; }
+  .order-item.dragging { opacity: 0.5; background: #e8f0fe; }
+  .order-item .order-num { font-size: 0.82rem; font-weight: 700; color: #b0b8c1; min-width: 1.5rem; text-align: center; }
+  .order-item .order-text { flex: 1; font-size: 0.95rem; }
+  .order-item .order-handle { color: #d5dae0; font-size: 1.2rem; }
+
+  /* ── Matching Quiz ─────────────────────────────────────── */
+  .match-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .match-col-label { font-size: 0.82rem; font-weight: 700; color: #8b95a1; text-align: center; margin-bottom: 0.5rem; }
+  .match-item {
+    padding: 0.7rem 1rem; background: #f2f4f6; border: none;
+    border-radius: 12px; cursor: pointer; transition: all 0.15s; text-align: center;
+    font-size: 0.92rem;
+  }
+  .match-item:hover:not(.matched):not(.disabled) { background: #e8f0fe; color: #3182f6; }
+  .match-item.selected { background: #e8f0fe; color: #3182f6; font-weight: 600; }
+  .match-item.matched { background: #f0fdf4; color: #16a34a; cursor: default; }
+  .match-item.wrong-match { background: #fef2f2; color: #f04452; animation: shake 0.3s; }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+</style>
+</head>
+<body>
+
+<!-- ── Login Overlay ──────────────────────────────────────── -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <h2 id="login-title">Jung's Quiz</h2>
+    <p class="sub">수강생 이름을 입력해주세요</p>
+    <input type="text" id="login-name" placeholder="이름" autocomplete="off" />
+    <button id="login-btn">입장하기</button>
+    <p class="loading" id="login-loading">확인 중...</p>
+    <p class="error" id="login-error">등록되지 않은 이름입니다.</p>
+  </div>
+</div>
+
+<header>
+  <div class="header-top">
+    <div style="display:flex;align-items:center;gap:0.5rem;">
+      <button id="back-btn" style="display:none;background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:0.3rem;" title="과목 선택으로">←</button>
+      <h1 id="site-title" style="cursor:pointer;">Jung's Quiz <span id="site-subtitle"></span></h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.5rem;">
+      <button id="msg-btn" style="display:none;background:none;border:none;color:rgba(255,255,255,0.7);padding:0.3rem 0.5rem;font-size:0.82rem;font-weight:600;cursor:pointer;position:relative;" title="채팅">채팅 <span id="msg-badge" style="display:none;position:absolute;top:-4px;right:-8px;background:#e55a3c;color:#fff;font-size:0.65rem;min-width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;"></span></button>
+      <span class="user-badge" id="user-badge" style="display:none;cursor:pointer;"></span>
+    </div>
+  </div>
+</header>
+<nav class="top-nav" id="top-nav"></nav>
+<div class="top-nav-mobile" id="top-nav-mobile">
+  <select id="day-select" style="width:100%;padding:0.6rem 0.8rem;border:none;background:#f2f4f6;border-radius:10px;font-size:0.88rem;font-weight:600;outline:none;color:#191f28;"></select>
+</div>
+
+<div id="app"></div>
+
+<!-- ── 채팅 모달 ──────────────────────────────────────────── -->
+<div id="msg-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9998;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:#fff;border-radius:20px;max-width:600px;width:95%;height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.12);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem;border-bottom:1px solid #f2f4f6;flex-shrink:0;">
+      <h3 style="font-size:1rem;font-weight:700;margin:0;color:#191f28;">채팅</h3>
+      <button id="msg-close" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#8b95a1;">✕</button>
+    </div>
+    <div id="msg-inbox" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:1rem;background:#f2f4f6;"></div>
+    <div style="display:flex;gap:0.5rem;align-items:end;padding:1rem;border-top:1px solid #f2f4f6;flex-shrink:0;">
+      <textarea id="msg-send-content" rows="3" placeholder="메시지를 입력하세요" style="flex:1;padding:0.6rem 0.8rem;border:none;background:#f2f4f6;border-radius:10px;font-size:0.9rem;outline:none;font-family:inherit;resize:none;"></textarea>
+      <button id="msg-send-btn" style="align-self:stretch;padding:0 1rem;background:#3182f6;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">보내기</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ============================================================
+// Configuration — Supabase 프로젝트 설정 후 아래 값을 변경하세요
+// ============================================================
+const SUPABASE_URL = 'https://ffacpnvvpqwhvlladhlh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmYWNwbnZ2cHF3aHZsbGFkaGxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODExMjYsImV4cCI6MjA4OTQ1NzEyNn0.nYwL7lgN28cn3bfHWNw4PaGsdENs5MyRiXwRlMyg_QY';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let currentSubject = null;
+let currentStudentId = null;
+let DAYS = [];
+
+// ── URL 파라미터 ──────────────────────────────────────────────
+const urlParams = new URLSearchParams(window.location.search);
+const subjectSlug = urlParams.get('subject');
+
+// ── TTS (Web Speech API) ───────────────────────────────────────
+let ttsVoice = null;
+
+function loadBestVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  ttsVoice =
+    voices.find(v => v.name.includes('Google US English')) ||
+    voices.find(v => v.name.includes('Samantha') && v.name.includes('Enhanced')) ||
+    voices.find(v => v.name.includes('Samantha')) ||
+    voices.find(v => v.lang === 'en-US' && v.localService === false) ||
+    voices.find(v => v.lang === 'en-US') ||
+    voices.find(v => v.lang.startsWith('en')) ||
+    null;
+}
+
+if ('speechSynthesis' in window) {
+  loadBestVoice();
+  window.speechSynthesis.onvoiceschanged = loadBestVoice;
+}
+
+function speak(text) {
+  if (!('speechSynthesis' in window)) return null;
+  window.speechSynthesis.cancel();
+  const cleaned = text.replace(/___/g, '').replace(/\s+/g, ' ').trim();
+  if (!cleaned) return null;
+  const utt = new SpeechSynthesisUtterance(cleaned);
+  utt.lang = 'en-US';
+  utt.rate = 0.82;
+  utt.pitch = 1.0;
+  if (ttsVoice) utt.voice = ttsVoice;
+  window.speechSynthesis.speak(utt);
+  return utt;
+}
+
+function ttsButton(text, extraClass) {
+  const cls = extraClass ? `tts-btn ${extraClass}` : 'tts-btn';
+  return `<button class="${cls}" data-tts="${text.replace(/"/g, '&quot;')}" title="발음 듣기" aria-label="발음 듣기">🔊</button>`;
+}
+
+// Global TTS click handler
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.tts-btn');
+  if (!btn) return;
+  e.stopPropagation();
+  const text = btn.dataset.tts;
+  if (!text) return;
+  document.querySelectorAll('.tts-btn.speaking').forEach(b => b.classList.remove('speaking'));
+  btn.classList.add('speaking');
+  const utt = speak(text);
+  if (utt) utt.onend = () => btn.classList.remove('speaking');
+  else btn.classList.remove('speaking');
+});
+
+// ── 로그인 처리 ──────────────────────────────────────────────
+function initLogin() {
+  return new Promise((resolve) => {
+    const saved = sessionStorage.getItem('quiz_user');
+    const savedId = sessionStorage.getItem('quiz_user_id');
+    if (saved && savedId) {
+      currentUser = saved;
+      currentStudentId = savedId;
+      document.getElementById('login-overlay').classList.add('hidden');
+      document.getElementById('user-badge').textContent = currentUser;
+      document.getElementById('user-badge').style.display = '';
+      resolve();
+      return;
+    }
+
+    const input = document.getElementById('login-name');
+    const btn = document.getElementById('login-btn');
+    const loading = document.getElementById('login-loading');
+    const error = document.getElementById('login-error');
+
+    async function doLogin() {
+      const name = input.value.trim();
+      if (!name) return;
+      btn.disabled = true;
+      loading.style.display = 'block';
+      error.style.display = 'none';
+
+      try {
+        let query = sb.from('students').select('id, name, subject_ids').eq('is_active', true);
+        const { data: students, error: err } = await query;
+        if (err) throw err;
+
+        const match = students.find(s => s.name.trim() === name);
+        if (match) {
+          if (currentSubject && match.subject_ids && match.subject_ids.length > 0) {
+            if (!match.subject_ids.includes(currentSubject.id)) {
+              error.textContent = '이 과목에 등록되지 않은 학생입니다.';
+              error.style.display = 'block';
+              btn.disabled = false;
+              loading.style.display = 'none';
+              return;
+            }
+          }
+          currentUser = match.name;
+          currentStudentId = match.id;
+          sessionStorage.setItem('quiz_user', currentUser);
+          sessionStorage.setItem('quiz_user_id', currentStudentId);
+          document.getElementById('login-overlay').classList.add('hidden');
+          document.getElementById('user-badge').textContent = currentUser;
+          document.getElementById('user-badge').style.display = '';
+          resolve();
+        } else {
+          error.textContent = '등록되지 않은 이름입니다.';
+          error.style.display = 'block';
+        }
+      } catch (err) {
+        error.textContent = '서버 연결에 실패했습니다. 다시 시도해주세요.';
+        error.style.display = 'block';
+      }
+      btn.disabled = false;
+      loading.style.display = 'none';
+    }
+
+    btn.addEventListener('click', doLogin);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  });
+}
+
+// ── 시험 결과 전송 ──────────────────────────────────────────
+async function submitResult(dayId, templateId, score, total, details) {
+  if (!currentStudentId) return false;
+  try {
+    const { error } = await sb.from('results').insert({
+      student_id: currentStudentId,
+      day_id: dayId,
+      template_id: templateId,
+      score,
+      total,
+      details
+    });
+    return !error;
+  } catch (err) {
+    console.error('결과 전송 실패:', err);
+    return false;
+  }
+}
+
+// ── 과목 선택 ──────────────────────────────────────────────
+async function loadSubjects() {
+  const app = document.getElementById('app');
+  app.innerHTML = '<div class="loading-screen"><div class="spinner"></div><p>과목 목록 불러오는 중...</p></div>';
+
+  const { data: allSubjects, error } = await sb
+    .from('subjects')
+    .select('*')
+    .eq('is_active', true)
+    .order('created_at');
+
+  if (error || !allSubjects || allSubjects.length === 0) {
+    app.innerHTML = '<div class="loading-screen"><p>등록된 과목이 없습니다.</p></div>';
+    return;
+  }
+
+  // 학생이 수강 중인 과목만 필터링
+  const student = currentStudentId ? (await sb.from('students').select('subject_ids').eq('id', currentStudentId).single()).data : null;
+  const studentSubjectIds = student?.subject_ids || [];
+  const subjects = studentSubjectIds.length > 0
+    ? allSubjects.filter(s => studentSubjectIds.includes(s.id))
+    : allSubjects;
+
+  if (subjects.length === 0) {
+    app.innerHTML = '<div class="loading-screen"><p>수강 중인 과목이 없습니다.</p></div>';
+    return;
+  }
+
+  // 공지사항 로드 (전체 + 과목별)
+  const { data: allNotices } = await sb.from('notices').select('*').eq('is_active', true).order('created_at', { ascending: false });
+  const globalNotices = (allNotices || []).filter(n => !n.subject_id);
+  const noticeHtml = globalNotices.length ? `
+    <div style="margin-bottom:1.5rem;max-width:500px;width:100%;">
+      <div style="font-size:0.88rem;font-weight:700;color:#555;margin-bottom:0.5rem;">📢 공지사항</div>
+      ${globalNotices.slice(0, 5).map(n => {
+        const dt = new Date(n.created_at);
+        const ts = `${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+        return `<div style="background:#fff;border:1px solid #eee;border-radius:10px;padding:0.7rem 1rem;margin-bottom:0.4rem;">
+          <div style="font-size:0.85rem;color:#333;white-space:pre-wrap;">${n.content}</div>
+          <div style="font-size:0.72rem;color:#aaa;margin-top:0.3rem;">${ts}</div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  // 과목별 공지
+  function subjectNotices(subjectId) {
+    const sn = (allNotices || []).filter(n => n.subject_id === subjectId);
+    if (!sn.length) return '';
+    return sn.slice(0, 3).map(n => `<div style="font-size:0.78rem;color:#e55a3c;margin-top:0.3rem;">📌 ${n.content}</div>`).join('');
+  }
+
+  app.innerHTML = `
+    <div class="subject-select">
+      ${noticeHtml}
+      <h2>과목을 선택하세요</h2>
+      <div class="subject-grid">
+        ${subjects.map(s => `
+          <div class="subject-card" data-slug="${s.slug}">
+            <h3>${s.name}</h3>
+            <p>${s.subtitle || ''}</p>
+            ${subjectNotices(s.id)}
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+
+  app.querySelectorAll('.subject-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const slug = card.dataset.slug;
+      const subject = subjects.find(s => s.slug === slug);
+      if (subject) selectSubject(subject);
+    });
+  });
+}
+
+function goBackToSubjects() {
+  currentSubject = null;
+  const nav = document.getElementById('top-nav');
+  nav.innerHTML = '';
+  nav.classList.remove('show');
+  document.getElementById('top-nav-mobile').classList.remove('show');
+  document.getElementById('back-btn').style.display = 'none';
+  document.getElementById('site-title').innerHTML = 'Jung\'s Quiz <span></span>';
+  const url = new URL(window.location);
+  url.searchParams.delete('subject');
+  url.hash = '';
+  window.history.replaceState({}, '', url.pathname + url.search);
+  loadSubjects();
+}
+
+document.getElementById('back-btn').addEventListener('click', goBackToSubjects);
+document.getElementById('site-title').addEventListener('click', () => {
+  if (currentSubject) goBackToSubjects();
+});
+
+async function selectSubject(subject) {
+  currentSubject = subject;
+  document.getElementById('site-title').innerHTML =
+    `${subject.name} <span></span>`;
+  document.getElementById('back-btn').style.display = '';
+  document.getElementById('login-title').textContent = subject.name;
+
+  // URL 업데이트
+  const url = new URL(window.location);
+  url.searchParams.set('subject', subject.slug);
+  window.history.replaceState({}, '', url);
+
+  await loadQuizData(subject);
+}
+
+// ── 퀴즈 데이터 로딩 ──────────────────────────────────────────
+async function loadQuizData(subject) {
+  const app = document.getElementById('app');
+  app.innerHTML = '<div class="loading-screen"><div class="spinner"></div><p>퀴즈 데이터 불러오는 중...</p></div>';
+
+  const { data: days, error: dErr } = await sb
+    .from('days')
+    .select('*')
+    .eq('subject_id', subject.id)
+    .order('sort_order')
+    .order('day_number');
+
+  if (dErr || !days || days.length === 0) {
+    app.innerHTML = '<div class="loading-screen"><p>등록된 퀴즈가 없습니다.</p></div>';
+    return;
+  }
+
+  const dayIds = days.map(d => d.id);
+  const { data: questions, error: qErr } = await sb
+    .from('questions')
+    .select('*')
+    .in('day_id', dayIds)
+    .order('sort_order');
+
+  if (qErr) {
+    app.innerHTML = '<div class="loading-screen"><p>문제를 불러올 수 없습니다.</p></div>';
+    return;
+  }
+
+  // 질문을 day_id + template_id 기준으로 그룹핑
+  const qMap = {};
+  (questions || []).forEach(q => {
+    const key = q.day_id;
+    if (!qMap[key]) qMap[key] = {};
+    if (!qMap[key][q.template_id]) qMap[key][q.template_id] = [];
+    qMap[key][q.template_id].push(q);
+  });
+
+  // DAYS 배열 구성
+  DAYS = days.map(d => ({
+    id: d.id,
+    day: d.day_number,
+    lesson: d.lesson,
+    title: d.title,
+    questions: qMap[d.id] || {}
+  }));
+
+  renderApp(subject);
+}
+
+// ── Render App ──────────────────────────────────────────────
+function renderApp(subject) {
+  const nav = document.getElementById('top-nav');
+  const mobileNav = document.getElementById('top-nav-mobile');
+  const daySelect = document.getElementById('day-select');
+  const app = document.getElementById('app');
+  nav.innerHTML = '';
+  nav.classList.add('show');
+  mobileNav.classList.add('show');
+  daySelect.innerHTML = '';
+  app.innerHTML = '';
+
+  const quizTypes = subject.quiz_types || [];
+
+  DAYS.forEach((d, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'top-nav-btn' + (i === 0 ? ' active' : '');
+    btn.dataset.section = 'day' + d.day;
+    btn.textContent = 'Day ' + d.day;
+    nav.appendChild(btn);
+
+    const opt = document.createElement('option');
+    opt.value = 'day' + d.day;
+    opt.textContent = `Day ${d.day} · ${d.title}`;
+    if (i === 0) opt.selected = true;
+    daySelect.appendChild(opt);
+
+    const sec = document.createElement('div');
+    sec.className = 'section' + (i === 0 ? ' active' : '');
+    sec.id = 'day' + d.day;
+
+    // 탭 생성
+    const tabsHtml = quizTypes.map((qt, ti) =>
+      `<button class="tab-btn${ti === 0 ? ' active' : ''}" data-tab="${qt.templateId}-day${d.day}">${qt.label}</button>`
+    ).join('');
+
+    const contentsHtml = quizTypes.map((qt, ti) =>
+      `<div class="tab-content${ti === 0 ? ' active' : ''}" id="${qt.templateId}-day${d.day}"></div>`
+    ).join('');
+
+    sec.innerHTML = `
+      <div class="container">
+        <div class="day-header">
+          <h2>Day ${d.day} · ${d.title}</h2>
+          <p>${d.lesson}</p>
+        </div>
+        <div class="tabs" id="tabs-day${d.day}">${tabsHtml}</div>
+        ${contentsHtml}
+      </div>`;
+    app.appendChild(sec);
+
+    // 각 퀴즈 타입별 렌더러 초기화
+    quizTypes.forEach(qt => {
+      const containerId = `${qt.templateId}-day${d.day}`;
+      const qs = d.questions[qt.templateId] || [];
+      const renderer = RENDERERS[qt.templateId];
+      if (renderer) {
+        renderer(containerId, qs, d);
+      } else {
+        document.getElementById(containerId).innerHTML =
+          '<p style="color:#999;text-align:center;padding:2rem;">지원하지 않는 문제 유형입니다.</p>';
+      }
+    });
+  });
+
+  // Top nav click (데스크톱)
+  nav.addEventListener('click', e => {
+    const btn = e.target.closest('.top-nav-btn');
+    if (!btn) return;
+    document.querySelectorAll('.top-nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.section).classList.add('active');
+    daySelect.value = btn.dataset.section;
+    location.hash = btn.dataset.section;
+    window.scrollTo(0, 0);
+  });
+
+  // Day 드롭다운 (모바일)
+  daySelect.addEventListener('change', () => {
+    const val = daySelect.value;
+    document.querySelectorAll('.top-nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    const matchBtn = document.querySelector(`.top-nav-btn[data-section="${val}"]`);
+    if (matchBtn) matchBtn.classList.add('active');
+    document.getElementById(val).classList.add('active');
+    history.replaceState(null, '', '#' + val);
+    window.scrollTo(0, 0);
+  });
+
+  // 해시에서 Day 복원
+  const hash = location.hash.replace('#', '');
+  if (hash && document.getElementById(hash)) {
+    document.querySelectorAll('.top-nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    const matchBtn = document.querySelector(`.top-nav-btn[data-section="${hash}"]`);
+    if (matchBtn) matchBtn.classList.add('active');
+    document.getElementById(hash).classList.add('active');
+    daySelect.value = hash;
+  }
+
+  // Sub tabs
+  app.addEventListener('click', e => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    const tabs = btn.closest('.tabs');
+    tabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const section = btn.closest('.section');
+    section.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+}
+
+// ── 틀린문제 모아보기 ──────────────────────────────────────────
+function renderWrongReview(wrongDetails, containerId) {
+  if (!wrongDetails.length) return '';
+  return `
+    <button class="review-toggle" id="rt-${containerId}">틀린 문제 모아보기 (${wrongDetails.length})</button>
+    <div class="review-list" id="rl-${containerId}" style="display:none;">
+      ${wrongDetails.map((w, i) => `
+        <div class="review-item">
+          <div class="review-q">${i + 1}. ${w.question}</div>
+          <div class="review-a">→ 정답: ${w.answer} ${w.fullSentence ? ttsButton(w.fullSentence) : ''}</div>
+          ${w.hint ? `<div class="review-hint">${w.hint}</div>` : ''}
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function bindReviewToggle(containerId) {
+  const toggle = document.getElementById('rt-' + containerId);
+  const list = document.getElementById('rl-' + containerId);
+  if (toggle && list) {
+    toggle.addEventListener('click', () => {
+      const open = list.style.display !== 'none';
+      list.style.display = open ? 'none' : 'block';
+      toggle.textContent = open ? `틀린 문제 모아보기 (${list.children.length})` : '접기';
+    });
+  }
+}
+
+// ── 결과 화면 공통 ──────────────────────────────────────────
+function resultEmoji(score, total) {
+  if (score === total) return '🎉';
+  if (score >= total * 0.7) return '👍';
+  if (score >= total * 0.4) return '🙂';
+  return '💪';
+}
+
+function resultMsg(score, total) {
+  if (score === total) return '완벽해요!';
+  if (score >= total * 0.7) return '잘 했어요!';
+  if (score >= total * 0.4) return '더 연습해봐요';
+  return '다시 도전해봐요';
+}
+
+// ============================================================
+// RENDERERS — 6종 퀴즈 렌더러
+// ============================================================
+
+const RENDERERS = {
+  'multiple-choice': renderMultipleChoice,
+  'fill-in-blank': renderFillInBlank,
+  'vocabulary': renderVocabulary,
+  'true-false': renderTrueFalse,
+  'ordering': renderOrdering,
+  'matching': renderMatching
+};
+
+// ── 1. 객관식 (Multiple Choice) ────────────────────────────────
+function renderMultipleChoice(containerId, questions, dayInfo) {
+  if (!questions.length) {
+    document.getElementById(containerId).innerHTML = '<p style="color:#999;text-align:center;">문제가 없습니다.</p>';
+    return;
+  }
+  let current = 0, score = 0, answered = false;
+  const wrongList = [];
+  const wrongDetails = [];
+
+  function render() {
+    const el = document.getElementById(containerId);
+    if (current >= questions.length) {
+      const pct = Math.round(score / questions.length * 100);
+      el.innerHTML = `<div class="result">
+        <div class="emoji">${resultEmoji(score, questions.length)}</div>
+        <div class="score">${score}<span>/${questions.length}</span></div>
+        <div class="msg">${resultMsg(score, questions.length)} (정답률 ${pct}%)</div>
+        <div class="submit-status sending" id="ss-${containerId}">결과 저장 중...</div>
+        <button class="retry-btn">다시 풀기</button>
+        ${renderWrongReview(wrongDetails, containerId)}
+      </div>`;
+      bindReviewToggle(containerId);
+      submitResult(dayInfo.id, 'multiple-choice', score, questions.length, wrongList.join(' | ')).then(ok => {
+        const ss = document.getElementById('ss-' + containerId);
+        if (ss) { ss.className = 'submit-status ' + (ok ? 'sent' : 'failed'); ss.textContent = ok ? '결과가 저장되었습니다' : '결과 저장 실패'; }
+      });
+      el.querySelector('.retry-btn').onclick = () => { current = 0; score = 0; answered = false; wrongList.length = 0; wrongDetails.length = 0; render(); };
+      return;
+    }
+    const q = questions[current].data;
+    const opts = q.options || [];
+    el.innerHTML = `
+      <div class="quiz-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width:${current/questions.length*100}%"></div></div>
+        <span class="progress-text">${current+1}/${questions.length}</span>
+      </div>
+      <div class="card">
+        <span class="quiz-type-tag">객관식</span>
+        <div class="quiz-question">빈칸에 알맞은 것을 고르세요.</div>
+        <div class="quiz-sentence">${q.question} ${ttsButton(q.question)}</div>
+        <div class="options">
+          ${opts.map((opt,i) => `<button class="option-btn" data-idx="${i}">${String.fromCharCode(65+i)}. ${opt}</button>`).join('')}
+        </div>
+        <div class="feedback" id="fb-${containerId}"></div>
+        <button class="next-btn" id="nb-${containerId}">${current+1 < questions.length ? '다음 문제 →' : '결과 보기'}</button>
+      </div>`;
+
+    el.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        const idx = parseInt(btn.dataset.idx);
+        const correctIdx = q.correctIndex;
+        const correct = idx === correctIdx;
+        const fullSentence = q.question.replace('___', opts[correctIdx] || '');
+        if (correct) score++;
+        else {
+          wrongList.push(fullSentence);
+          wrongDetails.push({ question: q.question, answer: opts[correctIdx], hint: q.explanation || '', fullSentence });
+        }
+        el.querySelectorAll('.option-btn').forEach((b, i) => {
+          b.disabled = true;
+          if (i === correctIdx) b.classList.add('correct');
+          else if (i === idx) b.classList.add('wrong');
+        });
+        const fb = document.getElementById('fb-' + containerId);
+        fb.className = 'feedback show ' + (correct ? 'correct' : 'wrong');
+        fb.innerHTML = correct
+          ? `✓ 정답! &nbsp;${q.explanation || ''} ${ttsButton(fullSentence)}`
+          : `✗ 오답. 정답: <strong>${String.fromCharCode(65+correctIdx)}. ${opts[correctIdx]}</strong> &nbsp;— ${q.explanation || ''} ${ttsButton(fullSentence)}`;
+        document.getElementById('nb-' + containerId).classList.add('show');
+      });
+    });
+    document.getElementById('nb-' + containerId).addEventListener('click', () => {
+      current++; answered = false; render();
+    });
+  }
+  render();
+}
+
+// ── 2. 빈칸채우기 (Fill in Blank) ──────────────────────────────
+function renderFillInBlank(containerId, questions, dayInfo) {
+  if (!questions.length) {
+    document.getElementById(containerId).innerHTML = '<p style="color:#999;text-align:center;">문제가 없습니다.</p>';
+    return;
+  }
+  let current = 0, score = 0;
+  const wrongList = [];
+  const wrongDetails = [];
+
+  function render() {
+    const el = document.getElementById(containerId);
+    if (current >= questions.length) {
+      const pct = Math.round(score / questions.length * 100);
+      el.innerHTML = `<div class="result">
+        <div class="emoji">${resultEmoji(score, questions.length)}</div>
+        <div class="score">${score}<span>/${questions.length}</span></div>
+        <div class="msg">${resultMsg(score, questions.length)} (정답률 ${pct}%)</div>
+        <div class="submit-status sending" id="ss-${containerId}">결과 저장 중...</div>
+        <button class="retry-btn">다시 풀기</button>
+        ${renderWrongReview(wrongDetails, containerId)}
+      </div>`;
+      bindReviewToggle(containerId);
+      submitResult(dayInfo.id, 'fill-in-blank', score, questions.length, wrongList.join(' | ')).then(ok => {
+        const ss = document.getElementById('ss-' + containerId);
+        if (ss) { ss.className = 'submit-status ' + (ok ? 'sent' : 'failed'); ss.textContent = ok ? '결과가 저장되었습니다' : '결과 저장 실패'; }
+      });
+      el.querySelector('.retry-btn').onclick = () => { current = 0; score = 0; wrongList.length = 0; wrongDetails.length = 0; render(); };
+      return;
+    }
+    const q = questions[current].data;
+    const templateHtml = (q.template || '').replace('___', '<span class="blank">___</span>');
+    el.innerHTML = `
+      <div class="quiz-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width:${current/questions.length*100}%"></div></div>
+        <span class="progress-text">${current+1}/${questions.length}</span>
+      </div>
+      <div class="card">
+        <span class="quiz-type-tag writing">빈칸채우기</span>
+        <div class="quiz-question">빈칸에 알맞은 말을 쓰세요.</div>
+        <div class="quiz-sentence">
+          ${q.prompt || ''}
+          <div class="ko">${templateHtml}</div>
+        </div>
+        <div class="write-area">
+          <input type="text" class="write-input" id="wi-${containerId}" placeholder="빈칸에 들어갈 말을 입력하세요" autocomplete="off" autocapitalize="off" />
+          <button class="check-btn" id="cb-${containerId}">확인</button>
+        </div>
+        <div class="feedback" id="fb-${containerId}"></div>
+        <button class="next-btn" id="nb-${containerId}">${current+1 < questions.length ? '다음 문제 →' : '결과 보기'}</button>
+      </div>`;
+
+    const input = document.getElementById('wi-' + containerId);
+    const checkBtn = document.getElementById('cb-' + containerId);
+    const fb = document.getElementById('fb-' + containerId);
+    const nextBtn = document.getElementById('nb-' + containerId);
+
+    function check() {
+      const val = input.value.trim().toLowerCase();
+      if (!val) return;
+      const accepted = q.acceptedAnswers || [];
+      const correct = accepted.some(a => a.toLowerCase() === val);
+      const fullSentence = (q.template || '').replace('___', accepted[0] || '');
+      if (correct) score++;
+      else {
+        wrongList.push(fullSentence);
+        wrongDetails.push({ question: q.prompt || '', answer: accepted[0] || '', hint: fullSentence, fullSentence });
+      }
+      checkBtn.disabled = true;
+      input.disabled = true;
+      fb.className = 'feedback show ' + (correct ? 'correct' : 'wrong');
+      fb.innerHTML = correct
+        ? `✓ 정답! ${ttsButton(fullSentence)}`
+        : `✗ 오답. 정답: <strong>${accepted[0] || ''}</strong> ${ttsButton(fullSentence)}`;
+      nextBtn.classList.add('show');
+    }
+
+    checkBtn.addEventListener('click', check);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+    nextBtn.addEventListener('click', () => { current++; render(); });
+    setTimeout(() => input.focus(), 50);
+  }
+  render();
+}
+
+// ── 3. 단어장 (Vocabulary) ─────────────────────────────────────
+function renderVocabulary(containerId, questions, dayInfo) {
+  const el = document.getElementById(containerId);
+  if (!questions.length) {
+    el.innerHTML = '<p style="color:#999;text-align:center;">단어장 준비 중</p>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="card">
+      <span class="quiz-type-tag vocab">단어장 ${questions.length}개</span>
+      <div class="vocab-list">
+        ${questions.map((q, i) => {
+          const d = q.data;
+          return `
+          <div class="vocab-card">
+            <span class="vocab-num">${i + 1}</span>
+            <div class="vocab-info">
+              <div class="vocab-en">${d.word || ''}</div>
+              <div class="vocab-ko">${d.meaning || ''}</div>
+              <div class="vocab-ex">${d.example || ''}</div>
+            </div>
+            ${ttsButton(d.word || '')}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+// ── 4. OX 퀴즈 (True/False) ───────────────────────────────────
+function renderTrueFalse(containerId, questions, dayInfo) {
+  if (!questions.length) {
+    document.getElementById(containerId).innerHTML = '<p style="color:#999;text-align:center;">문제가 없습니다.</p>';
+    return;
+  }
+  let current = 0, score = 0, answered = false;
+  const wrongList = [];
+  const wrongDetails = [];
+
+  function render() {
+    const el = document.getElementById(containerId);
+    if (current >= questions.length) {
+      const pct = Math.round(score / questions.length * 100);
+      el.innerHTML = `<div class="result">
+        <div class="emoji">${resultEmoji(score, questions.length)}</div>
+        <div class="score">${score}<span>/${questions.length}</span></div>
+        <div class="msg">${resultMsg(score, questions.length)} (정답률 ${pct}%)</div>
+        <div class="submit-status sending" id="ss-${containerId}">결과 저장 중...</div>
+        <button class="retry-btn">다시 풀기</button>
+        ${renderWrongReview(wrongDetails, containerId)}
+      </div>`;
+      bindReviewToggle(containerId);
+      submitResult(dayInfo.id, 'true-false', score, questions.length, wrongList.join(' | ')).then(ok => {
+        const ss = document.getElementById('ss-' + containerId);
+        if (ss) { ss.className = 'submit-status ' + (ok ? 'sent' : 'failed'); ss.textContent = ok ? '결과가 저장되었습니다' : '결과 저장 실패'; }
+      });
+      el.querySelector('.retry-btn').onclick = () => { current = 0; score = 0; answered = false; wrongList.length = 0; wrongDetails.length = 0; render(); };
+      return;
+    }
+    const q = questions[current].data;
+    el.innerHTML = `
+      <div class="quiz-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width:${current/questions.length*100}%"></div></div>
+        <span class="progress-text">${current+1}/${questions.length}</span>
+      </div>
+      <div class="card">
+        <span class="quiz-type-tag tf">OX 퀴즈</span>
+        <div class="quiz-question">다음 문장이 맞으면 O, 틀리면 X를 선택하세요.</div>
+        <div class="quiz-sentence">${q.statement || ''} ${ttsButton(q.statement || '')}</div>
+        <div class="options" style="grid-template-columns:1fr 1fr;">
+          <button class="option-btn" data-val="true" style="text-align:center;font-size:1.5rem;font-weight:800;">O</button>
+          <button class="option-btn" data-val="false" style="text-align:center;font-size:1.5rem;font-weight:800;">X</button>
+        </div>
+        <div class="feedback" id="fb-${containerId}"></div>
+        <button class="next-btn" id="nb-${containerId}">${current+1 < questions.length ? '다음 문제 →' : '결과 보기'}</button>
+      </div>`;
+
+    el.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        const selected = btn.dataset.val === 'true';
+        const correctVal = q.answer === true;
+        const correct = selected === correctVal;
+        if (correct) score++;
+        else {
+          wrongList.push(q.statement);
+          wrongDetails.push({ question: q.statement, answer: correctVal ? 'O (맞음)' : 'X (틀림)', hint: q.explanation || '', fullSentence: q.statement });
+        }
+        el.querySelectorAll('.option-btn').forEach(b => {
+          b.disabled = true;
+          const bVal = b.dataset.val === 'true';
+          if (bVal === correctVal) b.classList.add('correct');
+          else if (b === btn && !correct) b.classList.add('wrong');
+        });
+        const fb = document.getElementById('fb-' + containerId);
+        fb.className = 'feedback show ' + (correct ? 'correct' : 'wrong');
+        fb.innerHTML = correct
+          ? `✓ 정답! &nbsp;${q.explanation || ''}`
+          : `✗ 오답. 정답: <strong>${correctVal ? 'O' : 'X'}</strong> &nbsp;— ${q.explanation || ''}`;
+        document.getElementById('nb-' + containerId).classList.add('show');
+      });
+    });
+    document.getElementById('nb-' + containerId).addEventListener('click', () => {
+      current++; answered = false; render();
+    });
+  }
+  render();
+}
+
+// ── 5. 문장배열 (Ordering) ─────────────────────────────────────
+function renderOrdering(containerId, questions, dayInfo) {
+  if (!questions.length) {
+    document.getElementById(containerId).innerHTML = '<p style="color:#999;text-align:center;">문제가 없습니다.</p>';
+    return;
+  }
+  let current = 0, score = 0;
+  const wrongList = [];
+  const wrongDetails = [];
+
+  function render() {
+    const el = document.getElementById(containerId);
+    if (current >= questions.length) {
+      const pct = Math.round(score / questions.length * 100);
+      el.innerHTML = `<div class="result">
+        <div class="emoji">${resultEmoji(score, questions.length)}</div>
+        <div class="score">${score}<span>/${questions.length}</span></div>
+        <div class="msg">${resultMsg(score, questions.length)} (정답률 ${pct}%)</div>
+        <div class="submit-status sending" id="ss-${containerId}">결과 저장 중...</div>
+        <button class="retry-btn">다시 풀기</button>
+        ${renderWrongReview(wrongDetails, containerId)}
+      </div>`;
+      bindReviewToggle(containerId);
+      submitResult(dayInfo.id, 'ordering', score, questions.length, wrongList.join(' | ')).then(ok => {
+        const ss = document.getElementById('ss-' + containerId);
+        if (ss) { ss.className = 'submit-status ' + (ok ? 'sent' : 'failed'); ss.textContent = ok ? '결과가 저장되었습니다' : '결과 저장 실패'; }
+      });
+      el.querySelector('.retry-btn').onclick = () => { current = 0; score = 0; wrongList.length = 0; wrongDetails.length = 0; render(); };
+      return;
+    }
+
+    const q = questions[current].data;
+    const items = [...(q.items || [])];
+    // 셔플
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+
+    let userOrder = [...items];
+
+    el.innerHTML = `
+      <div class="quiz-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width:${current/questions.length*100}%"></div></div>
+        <span class="progress-text">${current+1}/${questions.length}</span>
+      </div>
+      <div class="card">
+        <span class="quiz-type-tag ordering">문장배열</span>
+        <div class="quiz-question">${q.instruction || '올바른 순서로 배열하세요.'}</div>
+        <div class="order-items" id="oi-${containerId}"></div>
+        <button class="check-btn" id="cb-${containerId}" style="width:100%;">정답 확인</button>
+        <div class="feedback" id="fb-${containerId}"></div>
+        <button class="next-btn" id="nb-${containerId}">${current+1 < questions.length ? '다음 문제 →' : '결과 보기'}</button>
+      </div>`;
+
+    const orderContainer = document.getElementById('oi-' + containerId);
+    let dragIdx = null;
+
+    function renderItems() {
+      orderContainer.innerHTML = userOrder.map((item, i) => `
+        <div class="order-item" draggable="true" data-idx="${i}">
+          <span class="order-num">${i + 1}</span>
+          <span class="order-text">${item}</span>
+          <span class="order-handle">⋮⋮</span>
+        </div>
+      `).join('');
+
+      orderContainer.querySelectorAll('.order-item').forEach(el => {
+        el.addEventListener('dragstart', e => {
+          dragIdx = parseInt(el.dataset.idx);
+          el.classList.add('dragging');
+        });
+        el.addEventListener('dragend', () => {
+          el.classList.remove('dragging');
+          dragIdx = null;
+        });
+        el.addEventListener('dragover', e => e.preventDefault());
+        el.addEventListener('drop', e => {
+          e.preventDefault();
+          const dropIdx = parseInt(el.dataset.idx);
+          if (dragIdx !== null && dragIdx !== dropIdx) {
+            const item = userOrder.splice(dragIdx, 1)[0];
+            userOrder.splice(dropIdx, 0, item);
+            renderItems();
+          }
+        });
+      });
+    }
+    renderItems();
+
+    document.getElementById('cb-' + containerId).addEventListener('click', () => {
+      const correctOrder = q.correctOrder || q.items || [];
+      const isCorrect = userOrder.every((item, i) => item === correctOrder[i]);
+      if (isCorrect) score++;
+      else {
+        const correctStr = correctOrder.join(' → ');
+        wrongList.push(correctStr);
+        wrongDetails.push({ question: q.instruction || '순서 배열', answer: correctStr, hint: '', fullSentence: correctOrder.join(' ') });
+      }
+
+      const fb = document.getElementById('fb-' + containerId);
+      fb.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
+      fb.innerHTML = isCorrect
+        ? '✓ 정답! 올바른 순서입니다.'
+        : `✗ 오답. 올바른 순서: <strong>${(q.correctOrder || q.items || []).join(' → ')}</strong>`;
+      document.getElementById('cb-' + containerId).disabled = true;
+      document.getElementById('nb-' + containerId).classList.add('show');
+      orderContainer.querySelectorAll('.order-item').forEach(el => el.setAttribute('draggable', 'false'));
+    });
+
+    document.getElementById('nb-' + containerId).addEventListener('click', () => {
+      current++; render();
+    });
+  }
+  render();
+}
+
+// ── 6. 매칭 (Matching) ──────────────────────────────────────
+function renderMatching(containerId, questions, dayInfo) {
+  if (!questions.length) {
+    document.getElementById(containerId).innerHTML = '<p style="color:#999;text-align:center;">문제가 없습니다.</p>';
+    return;
+  }
+  // 매칭은 한 문제에 여러 쌍이 들어있으므로 문제 단위로 처리
+  let current = 0, totalScore = 0, totalPairs = 0;
+  const wrongList = [];
+  const wrongDetails = [];
+
+  function render() {
+    const el = document.getElementById(containerId);
+    if (current >= questions.length) {
+      const pct = totalPairs > 0 ? Math.round(totalScore / totalPairs * 100) : 0;
+      el.innerHTML = `<div class="result">
+        <div class="emoji">${resultEmoji(totalScore, totalPairs)}</div>
+        <div class="score">${totalScore}<span>/${totalPairs}</span></div>
+        <div class="msg">${resultMsg(totalScore, totalPairs)} (정답률 ${pct}%)</div>
+        <div class="submit-status sending" id="ss-${containerId}">결과 저장 중...</div>
+        <button class="retry-btn">다시 풀기</button>
+        ${renderWrongReview(wrongDetails, containerId)}
+      </div>`;
+      bindReviewToggle(containerId);
+      submitResult(dayInfo.id, 'matching', totalScore, totalPairs, wrongList.join(' | ')).then(ok => {
+        const ss = document.getElementById('ss-' + containerId);
+        if (ss) { ss.className = 'submit-status ' + (ok ? 'sent' : 'failed'); ss.textContent = ok ? '결과가 저장되었습니다' : '결과 저장 실패'; }
+      });
+      el.querySelector('.retry-btn').onclick = () => { current = 0; totalScore = 0; totalPairs = 0; wrongList.length = 0; wrongDetails.length = 0; render(); };
+      return;
+    }
+
+    const q = questions[current].data;
+    const pairs = q.pairs || [];
+    totalPairs += pairs.length;
+
+    // 오른쪽 셔플
+    const rightItems = pairs.map(p => p.right);
+    for (let i = rightItems.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rightItems[i], rightItems[j]] = [rightItems[j], rightItems[i]];
+    }
+
+    let selectedLeft = null;
+    let matchedCount = 0;
+    const matchedPairs = new Set();
+
+    el.innerHTML = `
+      <div class="quiz-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width:${current/questions.length*100}%"></div></div>
+        <span class="progress-text">${current+1}/${questions.length}</span>
+      </div>
+      <div class="card">
+        <span class="quiz-type-tag matching">매칭</span>
+        <div class="quiz-question">왼쪽과 오른쪽을 올바르게 연결하세요.</div>
+        <div class="match-grid">
+          <div>
+            <div class="match-col-label">문제</div>
+            ${pairs.map((p, i) => `<div class="match-item left" data-idx="${i}" data-left="${encodeURIComponent(p.left)}" style="margin-bottom:0.5rem;">${p.left}</div>`).join('')}
+          </div>
+          <div>
+            <div class="match-col-label">정답</div>
+            ${rightItems.map((r, i) => `<div class="match-item right" data-right="${encodeURIComponent(r)}" style="margin-bottom:0.5rem;">${r}</div>`).join('')}
+          </div>
+        </div>
+        <div class="feedback" id="fb-${containerId}"></div>
+        <button class="next-btn" id="nb-${containerId}">${current+1 < questions.length ? '다음 문제 →' : '결과 보기'}</button>
+      </div>`;
+
+    el.querySelectorAll('.match-item.left').forEach(item => {
+      item.addEventListener('click', () => {
+        if (item.classList.contains('matched')) return;
+        el.querySelectorAll('.match-item.left').forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        selectedLeft = parseInt(item.dataset.idx);
+      });
+    });
+
+    el.querySelectorAll('.match-item.right').forEach(item => {
+      item.addEventListener('click', () => {
+        if (selectedLeft === null || item.classList.contains('matched')) return;
+        const leftItem = el.querySelector(`.match-item.left[data-idx="${selectedLeft}"]`);
+        const leftVal = decodeURIComponent(leftItem.dataset.left);
+        const rightVal = decodeURIComponent(item.dataset.right);
+        const pair = pairs[selectedLeft];
+
+        if (pair.right === rightVal) {
+          totalScore++;
+          matchedCount++;
+          leftItem.classList.remove('selected');
+          leftItem.classList.add('matched');
+          item.classList.add('matched');
+          matchedPairs.add(selectedLeft);
+          selectedLeft = null;
+
+          if (matchedCount === pairs.length) {
+            const fb = document.getElementById('fb-' + containerId);
+            fb.className = 'feedback show correct';
+            fb.innerHTML = '✓ 모두 맞췄습니다!';
+            document.getElementById('nb-' + containerId).classList.add('show');
+          }
+        } else {
+          wrongList.push(`${leftVal} ≠ ${rightVal}`);
+          wrongDetails.push({ question: leftVal, answer: pair.right, hint: '' });
+          item.classList.add('wrong-match');
+          setTimeout(() => item.classList.remove('wrong-match'), 300);
+        }
+      });
+    });
+
+    document.getElementById('nb-' + containerId).addEventListener('click', () => {
+      current++; render();
+    });
+  }
+  render();
+}
+
+// ============================================================
+// 앱 초기화
+// ============================================================
+// ============================================================
+// 쪽지 시스템
+// ============================================================
+async function checkUnreadMessages() {
+  if (!currentStudentId) return;
+  const { data } = await sb.from('messages')
+    .select('*')
+    .eq('student_id', currentStudentId)
+    .eq('is_read', false)
+    .eq('sender_type', 'admin')
+    .order('created_at', { ascending: false });
+
+  const unread = data || [];
+
+  // 쪽지 버튼 표시
+  const msgBtn = document.getElementById('msg-btn');
+  msgBtn.style.display = '';
+  const badge = document.getElementById('msg-badge');
+  if (unread.length > 0) {
+    badge.style.display = 'flex';
+    badge.textContent = unread.length;
+  } else {
+    badge.style.display = 'none';
+  }
+
+  // 읽지 않은 쪽지 알림 배너 (이미 표시 중이면 무시)
+  if (unread.length > 0) {
+    const existing = document.getElementById('msg-notify');
+    if (existing) return;
+    const notify = document.createElement('div');
+    notify.id = 'msg-notify';
+    notify.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #eee;border-radius:12px;padding:0.7rem 1rem;box-shadow:0 4px 20px rgba(0,0,0,0.12);cursor:pointer;z-index:9990;display:flex;align-items:center;gap:0.8rem;max-width:400px;width:90%;animation:slideUp 0.3s;';
+    const latest = unread[0];
+    const dt = new Date(latest.created_at);
+    const ts = `${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    notify.innerHTML = `
+      <div style="width:36px;height:36px;border-radius:50%;background:#4f9cf9;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4L12 13L2 4"/></svg></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:0.85rem;">새 채팅 ${unread.length > 1 ? `(${unread.length}건)` : ''}</div>
+        <div style="font-size:0.78rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${latest.content}</div>
+      </div>
+      <span style="font-size:0.7rem;color:#aaa;flex-shrink:0;">${ts}</span>`;
+    notify.addEventListener('click', async () => {
+      notify.remove();
+      document.getElementById('msg-modal').style.display = 'flex';
+      await loadInbox();
+    });
+    document.body.appendChild(notify);
+    // 사라지지 않고 유지. 클릭하거나 X 눌러야 닫힘
+    const closeBtn = document.createElement('span');
+    closeBtn.textContent = '✕';
+    closeBtn.style.cssText = 'font-size:0.85rem;color:#aaa;cursor:pointer;padding:0.2rem;flex-shrink:0;';
+    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); notify.remove(); });
+    notify.appendChild(closeBtn);
+  }
+}
+
+// 쪽지함 모달
+document.getElementById('msg-btn').addEventListener('click', async () => {
+  const modal = document.getElementById('msg-modal');
+  modal.style.display = 'flex';
+  await loadInbox();
+  setTimeout(() => document.getElementById('msg-send-content').focus(), 100);
+});
+
+document.getElementById('user-badge').addEventListener('click', () => {
+  if (confirm('로그아웃 하시겠습니까?')) {
+    sessionStorage.removeItem('quiz_user');
+    sessionStorage.removeItem('quiz_user_id');
+    window.location.href = window.location.pathname;
+  }
+});
+
+document.getElementById('msg-close').addEventListener('click', () => {
+  document.getElementById('msg-modal').style.display = 'none';
+});
+
+async function loadInbox() {
+  if (!currentStudentId) return;
+  const { data } = await sb.from('messages')
+    .select('*')
+    .eq('student_id', currentStudentId)
+    .order('created_at', { ascending: true })
+    .limit(50);
+
+  const msgs = data || [];
+  const el = document.getElementById('msg-inbox');
+
+  if (!msgs.length) {
+    el.innerHTML = '<p style="color:#999;text-align:center;">채팅 내역이 없습니다.</p>';
+    return;
+  }
+
+  el.innerHTML = msgs.map(m => {
+    const dt = new Date(m.created_at);
+    const timeStr = `${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    const isMine = m.sender_type === 'student';
+    return `<div style="display:flex;flex-direction:column;align-items:${isMine ? 'flex-end' : 'flex-start'};margin-bottom:0.5rem;">
+      <div style="background:${isMine ? '#e8f0fe' : '#fff'};border:none;padding:0.5rem 0.8rem;border-radius:${isMine ? '10px 10px 2px 10px' : '10px 10px 10px 2px'};max-width:85%;font-size:0.85rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;">${m.content}</div>
+      <span style="font-size:0.7rem;color:#aaa;margin-top:0.15rem;">${isMine ? '나' : '선생님'} · ${timeStr}</span>
+    </div>`;
+  }).join('');
+
+  // 스크롤 맨 아래로
+  setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+
+  // 읽음 처리
+  const unreadIds = msgs.filter(m => !m.is_read && m.sender_type === 'admin').map(m => m.id);
+  if (unreadIds.length) {
+    await sb.from('messages').update({ is_read: true }).in('id', unreadIds);
+    document.getElementById('msg-badge').style.display = 'none';
+  }
+}
+
+// 학생 → 선생님 채팅 보내기
+let msgSending = false;
+async function sendStudentMsg() {
+  if (msgSending) return;
+  const input = document.getElementById('msg-send-content');
+  const content = input.value.trim();
+  if (!content) return;
+  msgSending = true;
+
+  const { error } = await sb.from('messages').insert({
+    student_id: currentStudentId,
+    title: '',
+    content,
+    sender_type: 'student',
+    sender_name: currentUser
+  });
+
+  msgSending = false;
+  if (error) { alert('전송 실패'); return; }
+  input.value = '';
+  loadInbox();
+}
+
+document.getElementById('msg-send-btn').addEventListener('click', sendStudentMsg);
+document.getElementById('msg-send-content').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendStudentMsg(); }
+});
+
+// ============================================================
+// 앱 초기화
+// ============================================================
+async function init() {
+  await initLogin();
+
+  // 로그인 후 쪽지 확인 + 30초마다 폴링
+  checkUnreadMessages();
+  setInterval(() => {
+    checkUnreadMessages();
+    if (document.getElementById('msg-modal').style.display === 'flex') loadInbox();
+  }, 10000);
+
+  if (subjectSlug) {
+    const { data, error } = await sb
+      .from('subjects')
+      .select('*')
+      .eq('slug', subjectSlug)
+      .eq('is_active', true)
+      .single();
+
+    if (data) {
+      await selectSubject(data);
+    } else {
+      await loadSubjects();
+    }
+  } else {
+    await loadSubjects();
+  }
+}
+
+init();
+</script>
+</body>
+</html>

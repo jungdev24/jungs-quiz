@@ -1,0 +1,1992 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jung's Quiz — 관리자</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Pretendard', -apple-system, 'Segoe UI', sans-serif; background: #f7f8fa; color: #191f28; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+
+  /* ── Login ───────────────────────────────────────────── */
+  .login-overlay {
+    position: fixed; inset: 0; background: #f7f8fa; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-overlay.hidden { display: none; }
+  .login-box { text-align: center; padding: 2.5rem; max-width: 380px; width: 100%; background: #fff; border-radius: 20px; box-shadow: 0 2px 20px rgba(0,0,0,0.06); }
+  .login-box h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.3rem; color: #191f28; letter-spacing: -0.02em; }
+  .login-box .sub { font-size: 0.88rem; color: #8b95a1; margin-bottom: 2rem; }
+  .login-box input {
+    width: 100%; padding: 0.85rem 1rem; border: none; background: #f2f4f6; border-radius: 12px;
+    font-size: 0.95rem; outline: none; text-align: center; margin-bottom: 0.7rem; transition: all 0.2s;
+  }
+  .login-box input:focus { background: #e8f0fe; }
+  .login-box button {
+    width: 100%; padding: 0.85rem; background: #3182f6; color: #fff; border: none;
+    border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+  }
+  .login-box button:hover { background: #1b64da; }
+  .login-box .error { color: #f04452; font-size: 0.82rem; margin-top: 0.5rem; display: none; }
+
+  /* ── Layout ──────────────────────────────────────────── */
+  .admin-header {
+    background: #191f28; color: #fff; padding: 0.9rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .admin-header h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em; }
+  .admin-header .logout-btn {
+    background: rgba(255,255,255,0.12); border: none; color: rgba(255,255,255,0.8);
+    padding: 0.4rem 0.9rem; border-radius: 8px; font-size: 0.82rem;
+    font-weight: 600; cursor: pointer; transition: background 0.2s;
+  }
+  .admin-header .logout-btn:hover { background: rgba(255,255,255,0.2); }
+
+  .admin-nav {
+    background: #fff; border-bottom: 1px solid #f2f4f6;
+    display: flex; flex-wrap: wrap; gap: 0; padding: 0 0.5rem;
+  }
+  .nav-tab {
+    padding: 0.85rem 1.2rem; border: none; background: transparent;
+    font-size: 0.88rem; font-weight: 600; color: #8b95a1; cursor: pointer;
+    border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap;
+  }
+  .nav-tab:hover { color: #4e5968; }
+  .nav-tab.active { color: #3182f6; border-bottom-color: #3182f6; }
+
+  .admin-content { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Cards & Forms ───────────────────────────────────── */
+  .card { background: #fff; border-radius: 16px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 8px rgba(0,0,0,0.04); border: none; }
+  .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; color: #191f28; letter-spacing: -0.02em; }
+
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #6b7684; margin-bottom: 0.35rem; }
+  .form-group input, .form-group textarea, .form-group select {
+    width: 100%; padding: 0.7rem 0.9rem; border: none; background: #f2f4f6;
+    border-radius: 10px; font-size: 0.9rem; outline: none; font-family: inherit; transition: all 0.2s;
+  }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus { background: #e8f0fe; }
+  .form-group textarea { resize: vertical; min-height: 60px; }
+
+  .btn { padding: 0.55rem 1.2rem; border: none; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .btn-primary { background: #3182f6; color: #fff; }
+  .btn-primary:hover { background: #1b64da; }
+  .btn-danger { background: #fff; color: #f04452; border: 1px solid #fecdd3; }
+  .btn-danger:hover { background: #fef2f2; }
+  .btn-secondary { background: #f2f4f6; color: #4e5968; }
+  .btn-secondary:hover { background: #e5e8eb; }
+  .btn-success { background: #00c471; color: #fff; }
+  .btn-success:hover { background: #00a85e; }
+  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.8rem; }
+
+  .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+
+  /* ── Table ────────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th { text-align: left; padding: 0.7rem 0.8rem; background: transparent; font-weight: 600; color: #8b95a1; font-size: 0.8rem; border-bottom: 1px solid #f2f4f6; white-space: nowrap; }
+  td { padding: 0.75rem 0.8rem; border-bottom: 1px solid #f2f4f6; white-space: nowrap; color: #333d4b; }
+  tr:hover td { background: #f7f8fa; }
+
+  /* ── Quiz Editor ─────────────────────────────────────── */
+  .editor-layout { display: grid; grid-template-columns: 220px 1fr; gap: 1rem; }
+
+  .day-list { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 8px rgba(0,0,0,0.04); }
+  .day-list-header { padding: 0.85rem 1rem; font-weight: 700; font-size: 0.85rem; color: #6b7684; border-bottom: 1px solid #f2f4f6; display: flex; justify-content: space-between; align-items: center; }
+  .day-item {
+    padding: 0.65rem 1rem; cursor: pointer; font-size: 0.85rem;
+    border-bottom: 1px solid #f2f4f6; transition: all 0.15s;
+    display: flex; justify-content: space-between; align-items: center; color: #4e5968;
+  }
+  .day-item:hover { background: #f7f8fa; }
+  .day-item.active { background: #e8f0fe; color: #3182f6; font-weight: 600; }
+
+  .q-card {
+    background: #f7f8fa; border-radius: 12px; padding: 1rem;
+    margin-bottom: 0.6rem; border: none; transition: all 0.15s;
+  }
+  .q-card:hover { background: #f2f4f6; }
+  .q-card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 0.6rem;
+  }
+  .q-card-num { font-size: 0.8rem; font-weight: 700; color: #8b95a1; }
+  .q-card-actions { display: flex; gap: 0.4rem; align-items: center; }
+
+  /* ── Quiz Type Checkboxes ────────────────────────────── */
+  .qt-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+  .qt-row { display: flex; align-items: center; gap: 0.8rem; padding: 0.3rem 0; }
+  .qt-row input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #3182f6; }
+  .qt-row .qt-name { font-size: 0.85rem; font-weight: 600; min-width: 90px; color: #4e5968; }
+  .qt-row input[type="text"] { flex: 1; padding: 0.45rem 0.7rem; border: none; background: #f2f4f6; border-radius: 8px; font-size: 0.85rem; }
+
+  /* ── Toast ────────────────────────────────────────────── */
+  .toast {
+    position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(20px);
+    padding: 0.75rem 1.5rem; background: #191f28; color: #fff; border-radius: 12px;
+    font-size: 0.88rem; font-weight: 600; z-index: 9999; opacity: 0;
+    transition: all 0.3s; pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #f04452; }
+  .toast.success { background: #00c471; }
+
+  /* ── Modal ──────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999; backdrop-filter: blur(4px);
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: #fff; border-radius: 20px;
+    max-width: 560px; width: 92%; max-height: 85vh;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-header {
+    flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem 1.2rem; border-bottom: 1px solid #f2f4f6;
+  }
+  .modal-header h3 { margin: 0; font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; }
+  .modal-header .close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #8b95a1; }
+  .modal-body { flex: 1; overflow-y: auto; padding: 1rem 1.2rem; }
+  .modal-body .form-group { margin-bottom: 0.8rem; }
+  .modal-body .form-group:last-child { margin-bottom: 0; }
+  .modal-footer { flex-shrink: 0; padding: 1rem 1.2rem; border-top: 1px solid #f2f4f6; background: #fff; }
+
+  /* ── Panel Header ────────────────────────────────────── */
+  .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; height: 2.5rem; padding-bottom: 0.8rem; border-bottom: 1px solid #e5e8eb; }
+  .panel-header h3 { margin: 0; }
+  .filters:last-child { margin-bottom: 0; }
+
+  /* ── Filters ─────────────────────────────────────────── */
+  .filters { display: flex; gap: 0.6rem; flex-wrap: nowrap; margin-bottom: 0; padding-bottom: 0.6rem; border-bottom: 1px solid #f2f4f6; }
+  .filters select, .filters input {
+    padding: 0.55rem 0.85rem; border: none; background: #f2f4f6;
+    border-radius: 10px; font-size: 0.85rem; outline: none; transition: all 0.2s;
+  }
+  .filters select:focus, .filters input:focus { background: #e8f0fe; }
+
+  .empty-state { text-align: center; padding: 3rem; color: #8b95a1; font-size: 0.92rem; }
+
+  /* ── Mobile ─────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .admin-header { padding: 0.7rem 1rem; }
+    .admin-header h1 { font-size: 0.95rem; }
+    .admin-content { padding: 1rem 0.8rem; }
+    .card { padding: 1.2rem; border-radius: 14px; }
+    .card h3 { font-size: 0.95rem; }
+    .nav-tab { padding: 0.75rem 0.9rem; font-size: 0.82rem; }
+    .editor-layout { grid-template-columns: 1fr; }
+    .day-list { max-height: 200px; overflow-y: auto; }
+    table { font-size: 0.82rem; }
+    th, td { padding: 0.5rem 0.6rem; }
+    .btn { font-size: 0.8rem; padding: 0.45rem 0.9rem; }
+    .btn-sm { font-size: 0.75rem; padding: 0.3rem 0.6rem; }
+    .filters { gap: 0.4rem; }
+    .filters select, .filters input { font-size: 0.8rem; padding: 0.45rem 0.7rem; }
+    .modal { width: 95%; border-radius: 16px; }
+    .modal-header { padding: 1rem; }
+    .modal-body { padding: 1rem; }
+    .modal-footer { padding: 1rem; }
+    .form-group input, .form-group textarea, .form-group select { font-size: 0.88rem; }
+  }
+
+  /* ── Scrollbar ──────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d5dae0; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #b0b8c1; }
+</style>
+</head>
+<body>
+
+<!-- ── Login ────────────────────────────────────────────── -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <h2>Jung's Quiz 관리자</h2>
+    <p class="sub">관리자 이메일과 비밀번호를 입력하세요</p>
+    <input type="email" id="login-email" placeholder="이메일" autocomplete="email" />
+    <input type="password" id="login-pw" placeholder="비밀번호" />
+    <button id="login-btn">로그인</button>
+    <p class="error" id="login-error"></p>
+  </div>
+</div>
+
+<!-- ── Header ──────────────────────────────────────────── -->
+<div class="admin-header" id="admin-header" style="display:none;">
+  <h1>Jung's Quiz 관리자</h1>
+  <button class="logout-btn" id="logout-btn">로그아웃</button>
+</div>
+
+<nav class="admin-nav" id="admin-nav" style="display:none;">
+  <button class="nav-tab" data-panel="panel-subjects">과목 관리</button>
+  <button class="nav-tab" data-panel="panel-quiz">퀴즈 관리</button>
+  <button class="nav-tab" data-panel="panel-results">결과 보기</button>
+  <button class="nav-tab" data-panel="panel-students">학생 관리</button>
+  <button class="nav-tab" data-panel="panel-messages">채팅 <span id="msg-unread-badge" style="display:none;background:#e55a3c;color:#fff;font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:999px;margin-left:0.2rem;"></span></button>
+  <button class="nav-tab" data-panel="panel-notices">공지사항</button>
+</nav>
+
+<div class="admin-content" id="admin-content" style="display:none;">
+
+  <!-- ── 과목 관리 ──────────────────────────────────────── -->
+  <div class="panel" id="panel-subjects">
+    <div class="card">
+      <div class="panel-header">
+        <h3>과목 관리</h3>
+        <button class="btn btn-primary" id="subj-toggle-form">+ 새 과목 추가</button>
+      </div>
+      <div id="subjects-list"></div>
+    </div>
+  </div>
+
+  <!-- ── 과목 추가/수정 모달 ──────────────────────────────── -->
+  <div class="modal-overlay hidden" id="subj-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:0.7rem;">
+          <h3 id="subj-form-title">새 과목 추가</h3>
+          <a href="#" id="subj-delete-link" style="display:none;font-size:0.75rem;color:#f04452;text-decoration:none;"><span style="color:#d5dae0;margin-right:0.5rem;">|</span>삭제</a>
+        </div>
+        <button class="close-btn" onclick="document.getElementById('subj-modal').classList.add('hidden')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group"><label>과목명</label><input id="subj-name" placeholder="예: TOEFL Beginner" /></div>
+        <input type="hidden" id="subj-slug" />
+        <div class="form-group"><label>부제</label><input id="subj-subtitle" placeholder="예: 월,수,금(10회) 14:00~16:50" /></div>
+        <div class="form-group">
+          <label>AI 문제 생성 설명</label>
+          <textarea id="subj-ai-desc" rows="3" placeholder="예: TOEFL 초급 문법 교재 Grammar Gateway Intermediate 기반. 한국어 해설 포함."></textarea>
+        </div>
+        <div class="form-group">
+          <label>참고 파일 첨부 (이미지, PDF, 문서 등)</label>
+          <input type="file" id="subj-ai-file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.md,.csv,.hwp" />
+          <div id="subj-ai-files-list" style="margin-top:0.5rem;"></div>
+        </div>
+        <div style="display:flex;gap:1rem;">
+          <div class="form-group" style="flex:1;"><label>기본 Day 수</label><input type="number" id="subj-default-days" value="20" min="1" max="100" /></div>
+          <div class="form-group" style="flex:1;"><label>Day당 문제 수</label><input type="number" id="subj-default-qs" value="10" min="1" max="50" /></div>
+        </div>
+        <div class="form-group">
+          <label>사용할 문제 유형</label>
+          <div class="qt-grid" id="subj-qt">
+            <div class="qt-row"><input type="checkbox" value="multiple-choice" checked><span class="qt-name">객관식</span><input type="text" value="객관식" placeholder="표시 이름"></div>
+            <div class="qt-row"><input type="checkbox" value="fill-in-blank" checked><span class="qt-name">빈칸채우기</span><input type="text" value="빈칸채우기" placeholder="표시 이름"></div>
+            <div class="qt-row"><input type="checkbox" value="vocabulary"><span class="qt-name">단어장</span><input type="text" value="단어장" placeholder="표시 이름"></div>
+            <div class="qt-row"><input type="checkbox" value="true-false"><span class="qt-name">OX퀴즈</span><input type="text" value="OX퀴즈" placeholder="표시 이름"></div>
+            <div class="qt-row"><input type="checkbox" value="ordering"><span class="qt-name">문장배열</span><input type="text" value="문장배열" placeholder="표시 이름"></div>
+            <div class="qt-row"><input type="checkbox" value="matching"><span class="qt-name">매칭</span><input type="text" value="매칭" placeholder="표시 이름"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="btn-group" style="border:none;padding:0;">
+          <button class="btn btn-primary" id="subj-add-btn">저장</button>
+          <button class="btn btn-secondary" id="subj-cancel-btn">취소</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 퀴즈 관리 ──────────────────────────────────────── -->
+  <div class="panel" id="panel-quiz">
+    <div class="card">
+      <div class="panel-header">
+        <h3>퀴즈 관리</h3>
+      </div>
+      <div class="filters" style="margin-bottom:0;">
+        <select id="quiz-subject-select"></select>
+      </div>
+    </div>
+    <div class="editor-layout" id="editor-layout" style="display:none;">
+      <div>
+        <div class="day-list" id="day-list">
+          <div class="day-list-header">
+            <span>Day 목록</span>
+            <button class="btn btn-primary btn-sm" id="add-day-btn">+ 추가</button>
+          </div>
+          <div id="day-list-items"></div>
+        </div>
+      </div>
+      <div id="quiz-editor">
+        <div class="empty-state">왼쪽에서 Day를 선택하세요.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 결과 보기 ──────────────────────────────────────── -->
+  <div class="panel" id="panel-results">
+    <div class="card">
+      <div class="panel-header">
+        <h3>시험 결과</h3>
+        <button class="btn btn-secondary" id="res-export">CSV 내보내기</button>
+      </div>
+      <div class="filters">
+        <select id="res-subject" style="flex:1;min-width:0;"><option value="">전체 과목</option></select>
+        <input type="text" id="res-name" placeholder="학생 이름" style="flex:1;min-width:0;" />
+      </div>
+      <div class="table-wrap" id="results-table"></div>
+    </div>
+  </div>
+
+  <!-- ── 학생 관리 ──────────────────────────────────────── -->
+  <div class="panel" id="panel-students">
+    <div class="card">
+      <div class="panel-header">
+        <h3>학생 관리</h3>
+        <button class="btn btn-primary" id="stu-toggle-form">+ 학생 추가</button>
+      </div>
+      <div class="filters">
+        <select id="stu-filter-subject">
+          <option value="">전체 과목</option>
+        </select>
+      </div>
+      <div id="students-list"></div>
+      <div id="stu-form-wrap" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid #eee;">
+      <h3>학생 추가</h3>
+      <div class="form-group"><label>수강 과목</label><select id="stu-subject-select"><option value="">전체 과목</option></select></div>
+      <div class="form-group">
+        <label>학생 이름 (쉼표 또는 줄바꿈으로 여러 명 등록)</label>
+        <textarea id="stu-names" rows="8" placeholder="홍길동, 김영희, 이철수&#10;또는&#10;홍길동&#10;김영희&#10;이철수"></textarea>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="stu-add-btn">학생 등록</button>
+        <button class="btn btn-secondary" id="stu-cancel-btn">취소</button>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 채팅 ──────────────────────────────────────────── -->
+  <div class="panel" id="panel-messages">
+    <div class="card">
+      <div class="panel-header">
+        <h3>채팅</h3>
+        <button class="btn btn-primary" id="msg-compose-toggle">+ 채팅 보내기</button>
+      </div>
+      <div class="filters">
+        <select id="msg-filter"><option value="all">전체 대화</option><option value="received">학생이 보낸 채팅</option><option value="sent">내가 보낸 채팅</option></select>
+        <select id="msg-student-filter"><option value="">전체 학생</option></select>
+      </div>
+      <div id="msg-list"></div>
+    </div>
+  </div>
+
+  <!-- ── 공지사항 ──────────────────────────────────────── -->
+  <div class="panel" id="panel-notices">
+    <div class="card">
+      <div class="panel-header">
+        <h3>공지사항</h3>
+        <button class="btn btn-primary" id="notice-toggle-form">+ 공지 작성</button>
+      </div>
+      <div id="notices-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── 채팅 보내기 모달 ────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="msg-compose-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>채팅 보내기</h3>
+      <button class="close-btn" onclick="document.getElementById('msg-compose-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>받는 사람</label>
+        <select id="msg-to">
+          <option value="__all__">전체 학생</option>
+        </select>
+      </div>
+      <div class="form-group"><label>내용</label><textarea id="msg-content" rows="6" placeholder="메시지 내용"></textarea></div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="btn-group" style="border:none;padding:0;">
+        <button class="btn btn-primary" id="msg-send-btn">보내기</button>
+        <button class="btn btn-secondary" id="msg-compose-cancel">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 채팅 대화 모달 ─────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="msg-chat-modal">
+  <div class="modal" style="max-width:600px;width:95%;height:80vh;display:flex;flex-direction:column;padding:0;overflow:hidden;">
+    <div style="display:flex;align-items:center;padding:1rem;border-bottom:1px solid #f2f4f6;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:0.7rem;">
+        <span id="msg-chat-name" style="font-weight:700;font-size:1rem;"></span>
+        <a href="#" id="msg-delete-thread" style="font-size:0.75rem;color:#f04452;text-decoration:none;"><span style="color:#d5dae0;margin-right:0.5rem;">|</span>대화 삭제</a>
+      </div>
+      <span style="flex:1;"></span>
+      <button id="msg-back-btn" onclick="document.getElementById('msg-chat-modal').classList.add('hidden');openChatStudentId=null;openChatStudentName=null;" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#8b95a1;">✕</button>
+    </div>
+    <div id="msg-chat-area" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:1rem;background:#f2f4f6;"></div>
+    <div style="display:flex;gap:0.5rem;align-items:end;padding:1rem;border-top:1px solid #f2f4f6;flex-shrink:0;">
+      <textarea id="msg-chat-input" rows="2" placeholder="메시지를 입력하세요" style="flex:1;min-width:0;padding:0.6rem 0.8rem;border:none;background:#f2f4f6;border-radius:10px;font-size:0.88rem;outline:none;font-family:inherit;resize:none;"></textarea>
+      <button id="msg-chat-send" class="btn btn-primary" style="align-self:stretch;flex-shrink:0;padding:0 1rem;">보내기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 공지 추가/수정 모달 ────────────────────────────────── -->
+<div class="modal-overlay hidden" id="notice-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <h3 id="notice-modal-title">공지 작성</h3>
+        <a href="#" id="notice-delete-link" style="display:none;font-size:0.75rem;color:#f04452;text-decoration:none;"><span style="color:#d5dae0;margin-right:0.5rem;">|</span>삭제</a>
+      </div>
+      <button class="close-btn" onclick="document.getElementById('notice-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>대상</label><select id="notice-subject"><option value="">전체 (공통)</option></select></div>
+      <div class="form-group"><label>내용</label><textarea id="notice-content" rows="4" placeholder="공지 내용을 입력하세요"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <div class="btn-group" style="border:none;padding:0;">
+        <button class="btn btn-primary" id="notice-add-btn">저장</button>
+        <button class="btn btn-secondary" id="notice-cancel-btn">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 문제 편집 모달 ──────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="qedit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="qedit-title">문제 편집</h3>
+      <button class="close-btn" onclick="document.getElementById('qedit-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="qedit-form"></div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="btn-group" style="border:none;padding:0;">
+        <button class="btn btn-primary" id="qedit-save-btn">저장</button>
+        <button class="btn btn-secondary" id="qedit-cancel-btn">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Day 추가 모달 ───────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="day-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="day-modal-title">Day 추가</h3>
+      <button class="close-btn" onclick="document.getElementById('day-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Day 번호</label><input type="number" id="day-modal-num" min="1" /></div>
+      <div class="form-group"><label>제목</label><input id="day-modal-title-input" placeholder="예: 현재와 현재진행형" /></div>
+      <div class="form-group"><label>Lesson 범위 (선택)</label><input id="day-modal-lesson" placeholder="예: Lesson 1-5" /></div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="btn-group" style="border:none;padding:0;">
+        <button class="btn btn-primary" id="day-modal-save">저장</button>
+        <button class="btn btn-secondary" id="day-modal-cancel">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 학생 수정 모달 ──────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="stu-edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <h3>학생 수정</h3>
+        <a href="#" id="stu-edit-delete" style="font-size:0.75rem;color:#f04452;text-decoration:none;"><span style="color:#d5dae0;margin-right:0.5rem;">|</span>삭제</a>
+      </div>
+      <button class="close-btn" onclick="document.getElementById('stu-edit-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>이름</label><input id="stu-edit-name" /></div>
+      <div class="form-group"><label>수강 과목</label><div id="stu-edit-subjects"></div></div>
+    </div>
+    <div class="modal-footer">
+      <div class="btn-group" style="border:none;padding:0;">
+        <button class="btn btn-primary" id="stu-edit-save">저장</button>
+        <button class="btn btn-secondary" id="stu-edit-cancel">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 문제 복사 모달 ──────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="copy-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>문제 복사</h3>
+      <button class="close-btn" onclick="document.getElementById('copy-modal').classList.add('hidden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">선택한 과목의 모든 Day와 문제를 복사합니다.</p>
+      <div class="form-group"><label>복사할 원본 과목</label><select id="copy-source-subject"></select></div>
+      <div id="copy-status" style="margin-top:1rem;font-size:0.85rem;color:#888;"></div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="btn-group" style="border:none;padding:0;">
+        <button class="btn btn-primary" id="copy-save-btn">복사 실행</button>
+        <button class="btn btn-secondary" id="copy-cancel-btn">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ============================================================
+// Configuration
+// ============================================================
+const SUPABASE_URL = 'https://ffacpnvvpqwhvlladhlh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmYWNwbnZ2cHF3aHZsbGFkaGxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODExMjYsImV4cCI6MjA4OTQ1NzEyNn0.nYwL7lgN28cn3bfHWNw4PaGsdENs5MyRiXwRlMyg_QY';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── State ─────────────────────────────────────────────────
+let subjects = [];
+let currentQuizSubject = null;
+let currentDay = null;
+let allDays = [];
+let allQuestions = [];
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── Template definitions ──────────────────────────────────
+const TEMPLATES = {
+  'multiple-choice': { name: '객관식', fields: ['question', 'options', 'correctIndex', 'explanation'] },
+  'fill-in-blank': { name: '빈칸채우기', fields: ['prompt', 'template', 'acceptedAnswers', 'explanation'] },
+  'vocabulary': { name: '단어장', fields: ['word', 'meaning', 'example'] },
+  'true-false': { name: 'OX퀴즈', fields: ['statement', 'answer', 'explanation'] },
+  'ordering': { name: '문장배열', fields: ['instruction', 'items', 'correctOrder'] },
+  'matching': { name: '매칭', fields: ['pairs'] }
+};
+
+// ============================================================
+// Auth
+// ============================================================
+(async function initAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) showAdmin();
+
+  document.getElementById('login-btn').addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value.trim();
+    const pw = document.getElementById('login-pw').value;
+    const err = document.getElementById('login-error');
+    if (!email || !pw) { err.textContent = '이메일과 비밀번호를 입력하세요.'; err.style.display = 'block'; return; }
+
+    const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) { err.textContent = '로그인 실패: ' + error.message; err.style.display = 'block'; }
+    else showAdmin();
+  });
+
+  document.getElementById('login-pw').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('login-btn').click();
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    location.reload();
+  });
+})();
+
+async function showAdmin() {
+  document.getElementById('login-overlay').classList.add('hidden');
+  document.getElementById('admin-header').style.display = '';
+  document.getElementById('admin-nav').style.display = '';
+  document.getElementById('admin-content').style.display = '';
+  await loadSubjects();
+  loadStudents();
+  updateUnreadBadge();
+  setInterval(async () => {
+    const msgPanel = document.getElementById('panel-messages');
+    if (openChatStudentId && msgPanel?.classList.contains('active')) {
+      // 대화창 열림 — 뱃지 업데이트 건너뜀 (읽음 처리 후 직접 업데이트)
+    } else {
+      updateUnreadBadge();
+    }
+    if (!msgPanel || !msgPanel.classList.contains('active')) return;
+    if (openChatStudentId) {
+      // 대화창 열려있으면 채팅 영역만 갱신
+      const chatArea = document.getElementById('msg-chat-area');
+      const input = document.getElementById('msg-chat-input');
+      if (!chatArea || !input) return;
+      const { data } = await sb.from('messages')
+        .select('*')
+        .eq('student_id', openChatStudentId)
+        .order('created_at', { ascending: true })
+        .limit(50);
+      if (!data) return;
+      const name = openChatStudentName;
+      // 새 메시지가 있을 때만 갱신
+      const newHtml = data.map(m => {
+        const dt = new Date(m.created_at);
+        const ts = `${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+        const isAdmin = m.sender_type === 'admin';
+        return `<div style="display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-end' : 'flex-start'};margin-bottom:0.5rem;">
+          <div style="background:${isAdmin ? '#eff6ff' : '#f8f8f8'};padding:0.5rem 0.8rem;border-radius:${isAdmin ? '10px 10px 2px 10px' : '10px 10px 10px 2px'};max-width:80%;font-size:0.85rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;">${m.content}</div>
+          <span style="font-size:0.7rem;color:#aaa;margin-top:0.15rem;">${isAdmin ? '선생님' : name} · ${ts}</span>
+        </div>`;
+      }).join('');
+      if (chatArea.innerHTML !== newHtml) {
+        chatArea.innerHTML = newHtml;
+        setTimeout(() => { chatArea.scrollTop = chatArea.scrollHeight; }, 50);
+      }
+      // 읽음 처리 (뱃지 깜빡임 방지 — 먼저 읽음 처리 후 뱃지 업데이트)
+      const unreadIds = data.filter(m => m.sender_type === 'student' && !m.is_read).map(m => m.id);
+      if (unreadIds.length) {
+        await sb.from('messages').update({ is_read: true }).in('id', unreadIds);
+        updateUnreadBadge();
+      }
+    } else {
+      loadMessages();
+    }
+  }, 10000);
+  restoreHash();
+}
+
+// ── Nav tabs + hash routing ──────────────────────────────
+function switchTab(panelId) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const tab = document.querySelector(`.nav-tab[data-panel="${panelId}"]`);
+  if (tab) tab.classList.add('active');
+  const panel = document.getElementById(panelId);
+  if (panel) panel.classList.add('active');
+
+  if (panelId === 'panel-quiz') loadQuizSubjects();
+  if (panelId === 'panel-results') { loadResultSubjects(); resPage = 0; allResults = []; loadResults(); }
+  if (panelId === 'panel-messages') loadMessages();
+  if (panelId === 'panel-notices') loadNotices();
+
+  location.hash = panelId.replace('panel-', '');
+}
+
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.panel));
+});
+
+// 해시 복원
+function restoreHash() {
+  const hash = location.hash.replace('#', '');
+  const panelId = hash ? 'panel-' + hash : 'panel-subjects';
+  if (document.getElementById(panelId)) switchTab(panelId);
+}
+window.addEventListener('hashchange', restoreHash);
+
+// ============================================================
+// 과목 관리
+// ============================================================
+async function loadSubjects() {
+  const { data } = await sb.from('subjects').select('*').order('created_at');
+  subjects = data || [];
+  // Day 생성 상태 가져오기
+  const { data: days } = await sb.from('days').select('subject_id, ai_generated');
+  const dayStats = {};
+  (days || []).forEach(d => {
+    if (!dayStats[d.subject_id]) dayStats[d.subject_id] = { total: 0, generated: 0 };
+    dayStats[d.subject_id].total++;
+    if (d.ai_generated) dayStats[d.subject_id].generated++;
+  });
+  subjects.forEach(s => { s._dayStats = dayStats[s.id] || { total: 0, generated: 0 }; });
+  renderSubjectsList();
+}
+
+function renderSubjectsList() {
+  const el = document.getElementById('subjects-list');
+  if (!subjects.length) { el.innerHTML = '<p style="color:#8b95a1;">등록된 과목이 없습니다.</p>'; return; }
+  el.innerHTML = subjects.map(s => {
+    const ds = s._dayStats;
+    const genLabel = ds.total === 0 ? '<span style="display:inline-block;padding:0.15rem 0.5rem;background:#f2f4f6;border-radius:999px;font-size:0.75rem;color:#8b95a1;">미등록</span>'
+      : ds.generated === ds.total ? `<span style="display:inline-block;padding:0.15rem 0.6rem;background:#f0fdf4;border-radius:999px;font-size:0.75rem;color:#16a34a;font-weight:600;">${ds.generated}/${ds.total} 완료</span>`
+      : `<span style="display:inline-block;padding:0.15rem 0.6rem;background:#fef3c7;border-radius:999px;font-size:0.75rem;color:#b45309;font-weight:600;">${ds.generated}/${ds.total} 대기</span>`;
+    return `<div style="padding:0.7rem 0;border-bottom:1px solid #f2f4f6;${s.is_active ? '' : 'opacity:0.5;'}">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:0.8rem;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:0.95rem;color:#191f28;cursor:pointer;" onclick="editSubject('${s.id}')">${s.name}</div>
+          ${s.subtitle ? `<div style="font-size:0.8rem;color:#8b95a1;margin-top:0.15rem;">${s.subtitle}</div>` : ''}
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;">
+            ${genLabel}
+            <button class="btn btn-secondary btn-sm" onclick="copySubjectQuestions('${s.id}')" style="font-size:0.72rem;">문제 복사</button>
+            <button class="btn btn-sm" onclick="resetSubjectQuestions('${s.id}')" style="background:#fff;color:#f04452;border:1px solid #fecdd3;font-size:0.72rem;">문제초기화</button>
+          </div>
+        </div>
+        <div style="flex-shrink:0;">
+          <button class="btn btn-sm" onclick="toggleSubject('${s.id}', ${!s.is_active})" style="background:${s.is_active ? '#7c3aed' : '#e5e8eb'};color:${s.is_active ? '#fff' : '#8b95a1'};font-size:0.7rem;padding:0.25rem 0.55rem;">${s.is_active ? '발행됨' : '숨김'}</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// slug 자동 생성
+function toSlug(str) {
+  return str.toLowerCase().replace(/[가-힣]+/g, s => {
+    const m = {'초급':'beginner','중급':'intermediate','고급':'advanced','문법':'grammar','독해':'reading','듣기':'listening','작문':'writing'};
+    for (const [k,v] of Object.entries(m)) if (s.includes(k)) return v;
+    return '';
+  }).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'course-' + Date.now();
+}
+
+// 파일 첨부 — 미리보기 표시
+let pendingFiles = []; // 새로 선택한 파일들
+let existingFiles = []; // DB에 이미 저장된 파일 URL들
+
+document.getElementById('subj-ai-file').addEventListener('change', e => {
+  const files = [...e.target.files];
+  pendingFiles.push(...files);
+  renderFilesList();
+});
+
+function renderFilesList() {
+  const el = document.getElementById('subj-ai-files-list');
+  const allItems = [
+    ...existingFiles.map((f, i) => `<div style="display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;font-size:0.85rem;">
+      ${f.type?.startsWith('image') ? `<img src="${f.url}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;">` : '📄'}
+      <a href="${f.url}" target="_blank" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</a>
+      <button class="btn btn-danger btn-sm" onclick="removeExistingFile(${i})">×</button>
+    </div>`),
+    ...pendingFiles.map((f, i) => `<div style="display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;font-size:0.85rem;">
+      ${f.type?.startsWith('image') ? '🖼️' : '📄'}
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span>
+      <span style="color:#888;font-size:0.78rem;">(업로드 대기)</span>
+      <button class="btn btn-danger btn-sm" onclick="removePendingFile(${i})">×</button>
+    </div>`)
+  ];
+  el.innerHTML = allItems.length ? allItems.join('') : '';
+}
+
+window.removePendingFile = (i) => { pendingFiles.splice(i, 1); renderFilesList(); };
+window.removeExistingFile = (i) => { existingFiles.splice(i, 1); renderFilesList(); };
+
+async function uploadFiles(slug) {
+  const uploaded = [...existingFiles];
+  for (const file of pendingFiles) {
+    const ext = file.name.split('.').pop();
+    const path = `${slug}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const { error } = await sb.storage.from('subject-files').upload(path, file);
+    if (error) { toast(`파일 업로드 실패: ${file.name}`, 'error'); continue; }
+    const { data: { publicUrl } } = sb.storage.from('subject-files').getPublicUrl(path);
+    uploaded.push({ name: file.name, url: publicUrl, type: file.type, path });
+  }
+  pendingFiles = [];
+  return uploaded;
+}
+
+function resetSubjectForm() {
+  document.getElementById('subj-slug').value = '';
+  document.getElementById('subj-name').value = '';
+  document.getElementById('subj-subtitle').value = '';
+  document.getElementById('subj-ai-desc').value = '';
+  document.getElementById('subj-default-days').value = '20';
+  document.getElementById('subj-default-qs').value = '10';
+  document.getElementById('subj-ai-file').value = '';
+  pendingFiles = [];
+  existingFiles = [];
+  renderFilesList();
+  document.querySelectorAll('#subj-qt .qt-row input[type="checkbox"]').forEach(cb => cb.checked = false);
+  const btn = document.getElementById('subj-add-btn');
+  delete btn.dataset.editId;
+  btn.textContent = '저장';
+  document.getElementById('subj-form-title').textContent = '새 과목 추가';
+  document.getElementById('subj-delete-link').style.display = 'none';
+}
+
+document.getElementById('subj-toggle-form').addEventListener('click', () => {
+  resetSubjectForm();
+  document.getElementById('subj-modal').classList.remove('hidden');
+});
+
+document.getElementById('subj-cancel-btn').addEventListener('click', () => {
+  resetSubjectForm();
+  document.getElementById('subj-modal').classList.add('hidden');
+});
+
+document.getElementById('stu-toggle-form').addEventListener('click', () => {
+  document.getElementById('stu-form-wrap').style.display = '';
+  document.getElementById('stu-toggle-form').style.display = 'none';
+});
+
+document.getElementById('stu-cancel-btn').addEventListener('click', () => {
+  document.getElementById('stu-names').value = '';
+  document.getElementById('stu-form-wrap').style.display = 'none';
+  document.getElementById('stu-toggle-form').style.display = '';
+});
+
+document.getElementById('subj-add-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('subj-add-btn');
+  const editId = btn.dataset.editId;
+  const name = document.getElementById('subj-name').value.trim();
+  const subtitle = document.getElementById('subj-subtitle').value.trim();
+  const aiDesc = document.getElementById('subj-ai-desc').value.trim();
+  const defaultDays = parseInt(document.getElementById('subj-default-days').value) || 20;
+  const defaultQs = parseInt(document.getElementById('subj-default-qs').value) || 10;
+  if (!name) { toast('과목명을 입력하세요.', 'error'); return; }
+
+  const slug = document.getElementById('subj-slug').value.trim() || toSlug(name);
+
+  const quizTypes = [];
+  document.querySelectorAll('#subj-qt .qt-row').forEach(row => {
+    const cb = row.querySelector('input[type="checkbox"]');
+    if (cb.checked) {
+      quizTypes.push({ templateId: cb.value, label: row.querySelector('input[type="text"]').value || TEMPLATES[cb.value]?.name || cb.value });
+    }
+  });
+
+  if (!quizTypes.length) { toast('최소 1개의 문제 유형을 선택하세요.', 'error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+
+  // 파일 업로드
+  const aiFiles = await uploadFiles(slug);
+
+  const payload = { slug, name, subtitle, quiz_types: quizTypes, ai_description: aiDesc, ai_files: aiFiles, default_days: defaultDays, default_questions: defaultQs };
+  btn.disabled = false;
+
+  if (editId) {
+    const { error } = await sb.from('subjects').update(payload).eq('id', editId);
+    if (error) { toast('수정 실패: ' + error.message, 'error'); return; }
+    toast('과목이 수정되었습니다.', 'success');
+  } else {
+    const { error } = await sb.from('subjects').insert(payload);
+    if (error) { toast('추가 실패: ' + error.message, 'error'); return; }
+    toast('과목이 추가되었습니다.', 'success');
+  }
+
+  resetSubjectForm();
+  document.getElementById('subj-modal').classList.add('hidden');
+  loadSubjects();
+});
+
+window.toggleSubject = async (id, active) => {
+  await sb.from('subjects').update({ is_active: active }).eq('id', id);
+  loadSubjects();
+};
+
+window.deleteSubject = async (id) => {
+  if (!confirm('이 과목과 관련된 모든 데이터가 삭제됩니다. 정말 삭제하시겠습니까?')) return;
+  await sb.from('subjects').delete().eq('id', id);
+  toast('삭제되었습니다.', 'success');
+  loadSubjects();
+};
+
+window.editSubject = (id) => {
+  const s = subjects.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('subj-slug').value = s.slug;
+  document.getElementById('subj-name').value = s.name;
+  document.getElementById('subj-subtitle').value = s.subtitle || '';
+  document.getElementById('subj-ai-desc').value = s.ai_description || '';
+  existingFiles = s.ai_files || [];
+  pendingFiles = [];
+  document.getElementById('subj-ai-file').value = '';
+  renderFilesList();
+  document.getElementById('subj-default-days').value = s.default_days || 20;
+  document.getElementById('subj-default-qs').value = s.default_questions || 10;
+  document.querySelectorAll('#subj-qt .qt-row').forEach(row => {
+    const cb = row.querySelector('input[type="checkbox"]');
+    const txt = row.querySelector('input[type="text"]');
+    const qt = (s.quiz_types || []).find(q => q.templateId === cb.value);
+    cb.checked = !!qt;
+    if (qt) txt.value = qt.label;
+  });
+  const addBtn = document.getElementById('subj-add-btn');
+  addBtn.textContent = '저장';
+  addBtn.dataset.editId = id;
+  document.getElementById('subj-form-title').textContent = '과목 수정';
+  const delLink = document.getElementById('subj-delete-link');
+  delLink.style.display = '';
+  delLink.onclick = (e) => { e.preventDefault(); deleteSubject(id); document.getElementById('subj-modal').classList.add('hidden'); };
+  document.getElementById('subj-modal').classList.remove('hidden');
+};
+
+// ============================================================
+// 퀴즈 관리
+// ============================================================
+async function loadQuizSubjects() {
+  const sel = document.getElementById('quiz-subject-select');
+  sel.innerHTML = '<option value="">과목을 선택하세요</option>' +
+    subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+document.getElementById('quiz-subject-select').addEventListener('change', async (e) => {
+  const id = e.target.value;
+  currentDay = null;
+  document.getElementById('quiz-editor').innerHTML = '<div class="empty-state">왼쪽에서 Day를 선택하세요.</div>';
+  if (!id) { currentQuizSubject = null; document.getElementById('day-list-items').innerHTML = ''; document.getElementById('editor-layout').style.display = 'none'; return; }
+  currentQuizSubject = subjects.find(s => s.id === id);
+  document.getElementById('editor-layout').style.display = '';
+  await loadDays();
+});
+
+async function loadDays() {
+  if (!currentQuizSubject) return;
+  const { data } = await sb.from('days')
+    .select('*')
+    .eq('subject_id', currentQuizSubject.id)
+    .order('sort_order')
+    .order('day_number');
+  allDays = data || [];
+  renderDayList();
+}
+
+function renderDayList() {
+  const el = document.getElementById('day-list-items');
+  el.innerHTML = allDays.map(d => `
+    <div class="day-item${currentDay && currentDay.id === d.id ? ' active' : ''}" data-id="${d.id}">
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Day ${d.day_number} · ${d.title}</span>
+    </div>
+  `).join('');
+
+  el.querySelectorAll('.day-item').forEach(item => {
+    item.addEventListener('click', () => {
+      currentDay = allDays.find(d => d.id === item.dataset.id);
+      renderDayList();
+      loadDayQuestions();
+    });
+  });
+}
+
+window.editDay = (id) => {
+  const d = allDays.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('day-modal-num').value = d.day_number;
+  document.getElementById('day-modal-title-input').value = d.title;
+  document.getElementById('day-modal-lesson').value = d.lesson || '';
+  document.getElementById('day-modal-title').textContent = 'Day 수정';
+  document.getElementById('day-modal-save').dataset.editId = id;
+  document.getElementById('day-modal').classList.remove('hidden');
+};
+
+document.getElementById('add-day-btn').addEventListener('click', () => {
+  if (!currentQuizSubject) { toast('먼저 과목을 선택하세요.', 'error'); return; }
+  const nextNum = allDays.length > 0 ? Math.max(...allDays.map(d => d.day_number)) + 1 : 1;
+  document.getElementById('day-modal-num').value = nextNum;
+  document.getElementById('day-modal-title-input').value = '';
+  document.getElementById('day-modal-lesson').value = '';
+  document.getElementById('day-modal-title').textContent = 'Day 추가';
+  document.getElementById('day-modal-save').dataset.editId = '';
+  document.getElementById('day-modal').classList.remove('hidden');
+});
+
+document.getElementById('day-modal-cancel').addEventListener('click', () => {
+  document.getElementById('day-modal').classList.add('hidden');
+});
+
+document.getElementById('day-modal-save').addEventListener('click', async () => {
+  const num = parseInt(document.getElementById('day-modal-num').value);
+  const title = document.getElementById('day-modal-title-input').value.trim();
+  const lesson = document.getElementById('day-modal-lesson').value.trim();
+  if (!title) { toast('제목을 입력하세요.', 'error'); return; }
+
+  const editId = document.getElementById('day-modal-save').dataset.editId;
+
+  if (editId) {
+    const { error } = await sb.from('days').update({ day_number: num, title, lesson }).eq('id', editId);
+    if (error) { toast('수정 실패: ' + error.message, 'error'); return; }
+    toast('Day 수정됨', 'success');
+  } else {
+    const { data, error } = await sb.from('days').insert({
+      subject_id: currentQuizSubject.id,
+      day_number: num,
+      title,
+      lesson,
+      sort_order: num
+    }).select().single();
+    if (error) { toast('추가 실패: ' + error.message, 'error'); return; }
+    toast(`Day ${num} 추가됨`, 'success');
+    currentDay = data;
+  }
+
+  document.getElementById('day-modal').classList.add('hidden');
+  await loadDays();
+  renderDayList();
+  if (currentDay) loadDayQuestions();
+});
+
+window.deleteDay = async (id) => {
+  if (!confirm('이 Day의 모든 문제가 삭제됩니다. 계속하시겠습니까?')) return;
+  await sb.from('days').delete().eq('id', id);
+  if (currentDay && currentDay.id === id) currentDay = null;
+  toast('삭제됨', 'success');
+  loadDays();
+  document.getElementById('quiz-editor').innerHTML = '<div class="empty-state">왼쪽에서 Day를 선택하세요.</div>';
+};
+
+async function loadDayQuestions() {
+  if (!currentDay) return;
+  const { data } = await sb.from('questions')
+    .select('*')
+    .eq('day_id', currentDay.id)
+    .order('sort_order');
+  allQuestions = data || [];
+  renderQuizEditor();
+}
+
+function renderQuizEditor() {
+  if (!currentDay || !currentQuizSubject) return;
+  const editor = document.getElementById('quiz-editor');
+  const quizTypes = currentQuizSubject.quiz_types || [];
+
+  editor.innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <div style="display:flex;align-items:center;gap:0.7rem;">
+          <h3 style="margin:0;">Day ${currentDay.day_number} · ${currentDay.title}</h3>
+          <button class="btn btn-secondary btn-sm" onclick="editDay('${currentDay.id}')" style="font-size:0.78rem;">수정</button>
+          <a href="#" style="font-size:0.75rem;color:#f04452;text-decoration:none;margin-left:0.3rem;" onclick="event.preventDefault();deleteDay('${currentDay.id}')">삭제</a>
+        </div>
+      </div>
+      ${quizTypes.map(qt => {
+        const qs = allQuestions.filter(q => q.template_id === qt.templateId);
+        return `
+          <div style="margin-bottom:1.5rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+              <strong>${qt.label} (${qs.length}문제)</strong>
+              <button class="btn btn-primary btn-sm" onclick="addQuestion('${qt.templateId}')">+ 문제 추가</button>
+            </div>
+            <div id="qs-${qt.templateId}">
+              ${qs.length === 0 ? '<p style="color:#999;font-size:0.85rem;">문제가 없습니다.</p>' :
+                qs.map((q, i) => renderQuestionCard(q, i, qt.templateId)).join('')}
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
+
+}
+
+function renderQuestionCard(q, idx, templateId) {
+  const d = q.data;
+  let preview = '';
+
+  switch (templateId) {
+    case 'multiple-choice':
+      preview = `${d.question || ''} [${(d.options || []).join(', ')}] 정답: ${d.options?.[d.correctIndex] || ''}`;
+      break;
+    case 'fill-in-blank':
+      preview = `${d.prompt || ''} → ${d.template || ''}`;
+      break;
+    case 'vocabulary':
+      preview = `${d.word || ''} = ${d.meaning || ''}`;
+      break;
+    case 'true-false':
+      preview = `${d.statement || ''} → ${d.answer ? 'O' : 'X'}`;
+      break;
+    case 'ordering':
+      preview = `${d.instruction || ''} [${(d.items || []).join(', ')}]`;
+      break;
+    case 'matching':
+      preview = (d.pairs || []).map(p => `${p.left}↔${p.right}`).join(', ');
+      break;
+  }
+
+  return `
+    <div class="q-card">
+      <div class="q-card-header">
+        <span class="q-card-num">#${idx + 1}</span>
+        <div class="q-card-actions" style="align-items:center;gap:0.5rem;">
+          <button class="btn btn-secondary btn-sm" onclick="editQuestion('${q.id}')">편집</button>
+          <a href="#" style="font-size:0.75rem;color:#f04452;text-decoration:none;" onclick="event.preventDefault();deleteQuestion('${q.id}')">삭제</a>
+        </div>
+      </div>
+      <div style="font-size:0.85rem;color:#555;word-break:break-all;">${preview}</div>
+    </div>`;
+}
+
+// ── 문제 추가/편집/삭제 ────────────────────────────────────
+let qeditMode = null; // { mode: 'add'|'edit', templateId, questionId? }
+
+function getDefaultData(templateId) {
+  switch (templateId) {
+    case 'multiple-choice': return { question: '', options: ['', '', '', ''], correctIndex: 0, explanation: '' };
+    case 'fill-in-blank': return { prompt: '', template: '', acceptedAnswers: [''], explanation: '' };
+    case 'vocabulary': return { word: '', meaning: '', example: '' };
+    case 'true-false': return { statement: '', answer: true, explanation: '' };
+    case 'ordering': return { instruction: '올바른 순서로 배열하세요.', items: [''], correctOrder: [''] };
+    case 'matching': return { pairs: [{ left: '', right: '' }] };
+    default: return {};
+  }
+}
+
+function renderQEditForm(templateId, data) {
+  switch (templateId) {
+    case 'multiple-choice':
+      return `
+        <div class="form-group"><label>문장 (___로 빈칸 표시)</label><input id="qe-question" value="${(data.question||'').replace(/"/g,'&quot;')}" placeholder="He ___ breakfast every morning." /></div>
+        <div class="form-group"><label>보기 A</label><input id="qe-opt0" value="${(data.options?.[0]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>보기 B</label><input id="qe-opt1" value="${(data.options?.[1]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>보기 C</label><input id="qe-opt2" value="${(data.options?.[2]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>보기 D</label><input id="qe-opt3" value="${(data.options?.[3]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>정답</label><select id="qe-correct">
+          <option value="0" ${data.correctIndex===0?'selected':''}>A</option>
+          <option value="1" ${data.correctIndex===1?'selected':''}>B</option>
+          <option value="2" ${data.correctIndex===2?'selected':''}>C</option>
+          <option value="3" ${data.correctIndex===3?'selected':''}>D</option>
+        </select></div>
+        <div class="form-group"><label>해설</label><input id="qe-explanation" value="${(data.explanation||'').replace(/"/g,'&quot;')}" placeholder="3인칭 단수 + 습관 → eats" /></div>`;
+    case 'fill-in-blank':
+      return `
+        <div class="form-group"><label>한국어 문장</label><input id="qe-prompt" value="${(data.prompt||'').replace(/"/g,'&quot;')}" placeholder="나는 매일 커피를 마신다." /></div>
+        <div class="form-group"><label>영어 템플릿 (___로 빈칸)</label><input id="qe-template" value="${(data.template||'').replace(/"/g,'&quot;')}" placeholder="I ___ coffee every day." /></div>
+        <div class="form-group"><label>허용 답안 (쉼표 구분)</label><input id="qe-answers" value="${(data.acceptedAnswers||[]).join(', ')}" placeholder="drink, have" /></div>
+        <div class="form-group"><label>해설 (선택)</label><input id="qe-explanation" value="${(data.explanation||'').replace(/"/g,'&quot;')}" /></div>`;
+    case 'vocabulary':
+      return `
+        <div class="form-group"><label>영단어</label><input id="qe-word" value="${(data.word||'').replace(/"/g,'&quot;')}" placeholder="breakfast" /></div>
+        <div class="form-group"><label>한국어 뜻</label><input id="qe-meaning" value="${(data.meaning||'').replace(/"/g,'&quot;')}" placeholder="아침 식사" /></div>
+        <div class="form-group"><label>예문</label><input id="qe-example" value="${(data.example||'').replace(/"/g,'&quot;')}" placeholder="He has breakfast every morning." /></div>`;
+    case 'true-false':
+      return `
+        <div class="form-group"><label>문장</label><input id="qe-statement" value="${(data.statement||'').replace(/"/g,'&quot;')}" placeholder="Water boils at 100 degrees Celsius." /></div>
+        <div class="form-group"><label>정답</label><select id="qe-answer">
+          <option value="true" ${data.answer===true?'selected':''}>O (맞음)</option>
+          <option value="false" ${data.answer===false?'selected':''}>X (틀림)</option>
+        </select></div>
+        <div class="form-group"><label>해설</label><input id="qe-explanation" value="${(data.explanation||'').replace(/"/g,'&quot;')}" /></div>`;
+    case 'ordering':
+      return `
+        <div class="form-group"><label>지시문</label><input id="qe-instruction" value="${(data.instruction||'').replace(/"/g,'&quot;')}" placeholder="올바른 순서로 배열하세요." /></div>
+        <div class="form-group"><label>섞인 단어/문장 (쉼표 구분)</label><input id="qe-items" value="${(data.items||[]).join(', ')}" placeholder="every, He, morning, breakfast, has" /></div>
+        <div class="form-group"><label>올바른 순서 (쉼표 구분)</label><input id="qe-correct-order" value="${(data.correctOrder||[]).join(', ')}" placeholder="He, has, breakfast, every, morning" /></div>`;
+    case 'matching':
+      const pairs = data.pairs || [{ left: '', right: '' }];
+      return `
+        <div id="qe-pairs">
+          ${pairs.map((p, i) => `<div class="form-group" style="display:flex;gap:0.5rem;align-items:end;">
+            <div style="flex:1;"><label>${i===0?'왼쪽 (문제)':''}</label><input class="qe-left" value="${(p.left||'').replace(/"/g,'&quot;')}" placeholder="breakfast" /></div>
+            <div style="flex:1;"><label>${i===0?'오른쪽 (정답)':''}</label><input class="qe-right" value="${(p.right||'').replace(/"/g,'&quot;')}" placeholder="아침 식사" /></div>
+            <button class="btn btn-danger btn-sm" onclick="this.closest('.form-group').remove()" style="margin-bottom:1rem;">×</button>
+          </div>`).join('')}
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="addMatchPair()">+ 쌍 추가</button>`;
+    default:
+      return '<p>지원하지 않는 유형</p>';
+  }
+}
+
+window.addMatchPair = () => {
+  const container = document.getElementById('qe-pairs');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.className = 'form-group';
+  div.style.cssText = 'display:flex;gap:0.5rem;align-items:end;';
+  div.innerHTML = `
+    <div style="flex:1;"><input class="qe-left" value="" placeholder="breakfast" /></div>
+    <div style="flex:1;"><input class="qe-right" value="" placeholder="아침 식사" /></div>
+    <button class="btn btn-danger btn-sm" onclick="this.closest('.form-group').remove()" style="margin-bottom:1rem;">×</button>`;
+  container.appendChild(div);
+};
+
+function collectFormData(templateId) {
+  switch (templateId) {
+    case 'multiple-choice':
+      return {
+        question: document.getElementById('qe-question').value.trim(),
+        options: [
+          document.getElementById('qe-opt0').value.trim(),
+          document.getElementById('qe-opt1').value.trim(),
+          document.getElementById('qe-opt2').value.trim(),
+          document.getElementById('qe-opt3').value.trim()
+        ],
+        correctIndex: parseInt(document.getElementById('qe-correct').value),
+        explanation: document.getElementById('qe-explanation').value.trim()
+      };
+    case 'fill-in-blank':
+      return {
+        prompt: document.getElementById('qe-prompt').value.trim(),
+        template: document.getElementById('qe-template').value.trim(),
+        acceptedAnswers: document.getElementById('qe-answers').value.split(',').map(s => s.trim()).filter(Boolean),
+        explanation: document.getElementById('qe-explanation').value.trim()
+      };
+    case 'vocabulary':
+      return {
+        word: document.getElementById('qe-word').value.trim(),
+        meaning: document.getElementById('qe-meaning').value.trim(),
+        example: document.getElementById('qe-example').value.trim()
+      };
+    case 'true-false':
+      return {
+        statement: document.getElementById('qe-statement').value.trim(),
+        answer: document.getElementById('qe-answer').value === 'true',
+        explanation: document.getElementById('qe-explanation').value.trim()
+      };
+    case 'ordering':
+      return {
+        instruction: document.getElementById('qe-instruction').value.trim(),
+        items: document.getElementById('qe-items').value.split(',').map(s => s.trim()).filter(Boolean),
+        correctOrder: document.getElementById('qe-correct-order').value.split(',').map(s => s.trim()).filter(Boolean)
+      };
+    case 'matching':
+      const lefts = document.querySelectorAll('.qe-left');
+      const rights = document.querySelectorAll('.qe-right');
+      const pairs = [];
+      lefts.forEach((l, i) => {
+        const left = l.value.trim();
+        const right = rights[i]?.value.trim() || '';
+        if (left || right) pairs.push({ left, right });
+      });
+      return { pairs };
+    default: return {};
+  }
+}
+
+function openQEditModal(templateId, data, mode, questionId) {
+  qeditMode = { mode, templateId, questionId };
+  document.getElementById('qedit-title').textContent = mode === 'add' ? '문제 추가' : '문제 편집';
+  document.getElementById('qedit-form').innerHTML = renderQEditForm(templateId, data);
+  document.getElementById('qedit-modal').classList.remove('hidden');
+}
+
+window.addQuestion = (templateId) => {
+  if (!currentDay) return;
+  openQEditModal(templateId, getDefaultData(templateId), 'add', null);
+};
+
+window.editQuestion = (id) => {
+  const q = allQuestions.find(q => q.id === id);
+  if (!q) return;
+  openQEditModal(q.template_id, q.data, 'edit', id);
+};
+
+document.getElementById('qedit-cancel-btn').addEventListener('click', () => {
+  document.getElementById('qedit-modal').classList.add('hidden');
+  qeditMode = null;
+});
+
+document.getElementById('qedit-save-btn').addEventListener('click', async () => {
+  if (!qeditMode) return;
+  const data = collectFormData(qeditMode.templateId);
+
+  if (qeditMode.mode === 'add') {
+    const sortOrder = allQuestions.filter(q => q.template_id === qeditMode.templateId).length;
+    const { error } = await sb.from('questions').insert({
+      day_id: currentDay.id,
+      template_id: qeditMode.templateId,
+      data,
+      sort_order: sortOrder
+    });
+    if (error) { toast('추가 실패: ' + error.message, 'error'); return; }
+    toast('문제 추가됨', 'success');
+  } else {
+    const { error } = await sb.from('questions').update({ data }).eq('id', qeditMode.questionId);
+    if (error) { toast('수정 실패: ' + error.message, 'error'); return; }
+    toast('문제 수정됨', 'success');
+  }
+
+  document.getElementById('qedit-modal').classList.add('hidden');
+  qeditMode = null;
+  loadDayQuestions();
+});
+
+window.deleteQuestion = async (id) => {
+  if (!confirm('이 문제를 삭제하시겠습니까?')) return;
+  await sb.from('questions').delete().eq('id', id);
+  toast('삭제됨', 'success');
+  loadDayQuestions();
+};
+
+// 문제 복사 (같은 Day 내 복제)
+window.copyQuestion = async (id) => {
+  const q = allQuestions.find(q => q.id === id);
+  if (!q) return;
+  const sortOrder = allQuestions.filter(x => x.template_id === q.template_id).length;
+  const { error } = await sb.from('questions').insert({
+    day_id: q.day_id,
+    template_id: q.template_id,
+    data: q.data,
+    sort_order: sortOrder
+  });
+  if (error) { toast('복사 실패', 'error'); return; }
+  toast('문제 복사됨', 'success');
+  loadDayQuestions();
+};
+
+// Day 전체 복사 (같은 과목 내 새 Day로)
+window.copyDay = async (dayId) => {
+  const srcDay = allDays.find(d => d.id === dayId);
+  if (!srcDay || !currentQuizSubject) return;
+  const nextNum = Math.max(...allDays.map(d => d.day_number)) + 1;
+
+  // 새 Day 생성
+  const { data: newDay, error: dErr } = await sb.from('days').insert({
+    subject_id: currentQuizSubject.id,
+    day_number: nextNum,
+    title: srcDay.title + ' (복사)',
+    lesson: srcDay.lesson,
+    sort_order: nextNum,
+    ai_generated: srcDay.ai_generated
+  }).select().single();
+
+  if (dErr) { toast('Day 복사 실패: ' + dErr.message, 'error'); return; }
+
+  // 문제 복사
+  const { data: srcQuestions } = await sb.from('questions')
+    .select('*').eq('day_id', dayId).order('sort_order');
+
+  if (srcQuestions && srcQuestions.length) {
+    const rows = srcQuestions.map(q => ({
+      day_id: newDay.id,
+      template_id: q.template_id,
+      data: q.data,
+      sort_order: q.sort_order
+    }));
+    await sb.from('questions').insert(rows);
+  }
+
+  toast(`Day ${nextNum} 으로 복사됨 (${srcQuestions?.length || 0}문제)`, 'success');
+  await loadDays();
+  currentDay = newDay;
+  renderDayList();
+  loadDayQuestions();
+};
+
+// ============================================================
+// 결과 보기
+// ============================================================
+async function loadResultSubjects() {
+  const sel = document.getElementById('res-subject');
+  sel.innerHTML = '<option value="">전체 과목</option>' +
+    subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+function searchResults() { resPage = 0; allResults = []; loadResults(); }
+document.getElementById('res-subject').addEventListener('change', searchResults);
+document.getElementById('res-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') searchResults(); });
+
+const RES_PAGE_SIZE = 30;
+let resPage = 0;
+let allResults = [];
+let resLoading = false;
+
+async function loadResults(append) {
+  if (resLoading) return;
+  resLoading = true;
+
+  let query = sb.from('results')
+    .select('*, students(name), days(day_number, title, subject_id, subjects(name))')
+    .order('submitted_at', { ascending: false })
+    .range(resPage * RES_PAGE_SIZE, (resPage + 1) * RES_PAGE_SIZE - 1);
+
+  const subjectId = document.getElementById('res-subject').value;
+  const nameFilter = document.getElementById('res-name').value.trim();
+  const from = '';
+  const to = '';
+
+  if (from) query = query.gte('submitted_at', from + 'T00:00:00');
+  if (to) query = query.lte('submitted_at', to + 'T23:59:59');
+
+  const { data, error } = await query;
+  resLoading = false;
+  if (error) { toast('조회 실패', 'error'); return; }
+
+  let results = data || [];
+
+  if (subjectId) results = results.filter(r => r.days?.subject_id === subjectId);
+  if (nameFilter) results = results.filter(r => r.students?.name?.includes(nameFilter));
+
+  if (append) {
+    allResults = allResults.concat(results);
+  } else {
+    allResults = results;
+  }
+
+  renderResultsTable(allResults, results.length >= RES_PAGE_SIZE);
+}
+
+function renderResultsTable(results, hasMore) {
+  const el = document.getElementById('results-table');
+  if (!results.length) { el.innerHTML = '<p style="color:#999;text-align:center;padding:1rem;">결과가 없습니다.</p>'; return; }
+
+  el.innerHTML = results.map(r => {
+    const pct = r.total > 0 ? Math.round(r.score / r.total * 100) : 0;
+    const dt = new Date(r.submitted_at);
+    const timeStr = `${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    const pctColor = pct >= 80 ? '#16a34a' : pct >= 50 ? '#b45309' : '#f04452';
+    return `<div style="display:flex;align-items:center;gap:0.8rem;padding:0.7rem 0;border-bottom:1px solid #f2f4f6;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+          <span style="font-weight:600;font-size:0.9rem;color:#191f28;">${r.students?.name || ''}</span>
+          <span style="font-size:0.78rem;color:#8b95a1;">Day ${r.days?.day_number || ''} · ${TEMPLATES[r.template_id]?.name || r.template_id}</span>
+        </div>
+        <div style="font-size:0.75rem;color:#b0b8c1;margin-top:0.15rem;">${r.days?.subjects?.name || ''} · ${timeStr}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-weight:700;font-size:0.95rem;color:${pctColor};">${pct}%</div>
+        <div style="font-size:0.75rem;color:#8b95a1;">${r.score}/${r.total}</div>
+      </div>
+    </div>`;
+  }).join('') + `
+  <div style="text-align:center;margin-top:1rem;">
+    <span style="font-size:0.82rem;color:#8b95a1;">${results.length}건 표시</span>
+    ${hasMore ? `<button class="btn btn-secondary btn-sm" id="res-load-more" style="margin-left:0.5rem;">더 보기</button>` : ''}
+  </div>`;
+
+  if (hasMore) {
+    document.getElementById('res-load-more').addEventListener('click', () => {
+      resPage++;
+      loadResults(true);
+    });
+  }
+}
+
+document.getElementById('res-export').addEventListener('click', () => {
+  const table = document.querySelector('#results-table table');
+  if (!table) { toast('먼저 검색하세요.', 'error'); return; }
+  const rows = [...table.querySelectorAll('tr')];
+  const csv = rows.map(r => [...r.querySelectorAll('th,td')].map(c => `"${c.textContent}"`).join(',')).join('\n');
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `quiz-results-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+});
+
+// ============================================================
+// 학생 관리
+// ============================================================
+let allStudents = [];
+
+async function loadStudents() {
+  const { data } = await sb.from('students').select('*').order('created_at');
+  allStudents = data || [];
+  renderStudentSubjects();
+  renderStudentFilter();
+  filterStudents();
+}
+
+function renderStudentFilter() {
+  const el = document.getElementById('stu-filter-subject');
+  el.innerHTML = '<option value="">전체 과목</option>' +
+    subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+document.getElementById('stu-filter-subject').addEventListener('change', filterStudents);
+
+function filterStudents() {
+  const filterId = document.getElementById('stu-filter-subject').value;
+  const filtered = filterId
+    ? allStudents.filter(s => !s.subject_ids?.length || s.subject_ids.includes(filterId))
+    : allStudents;
+  renderStudentsList(filtered);
+}
+
+function renderStudentsList(students) {
+  const el = document.getElementById('students-list');
+  if (!students.length) { el.innerHTML = '<p style="color:#8b95a1;">등록된 학생이 없습니다.</p>'; return; }
+
+  function getSubjectNames(ids) {
+    if (!ids || !ids.length) return '전체';
+    return ids.map(id => { const s = subjects.find(x => x.id === id); return s ? s.name : ''; }).filter(Boolean).join(', ') || '전체';
+  }
+
+  el.innerHTML = students.map(s => `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.7rem 0;border-bottom:1px solid #f2f4f6;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:0.9rem;color:#191f28;cursor:pointer;" onclick="editStudent('${s.id}')">${s.name}</div>
+        <div style="font-size:0.78rem;color:#8b95a1;margin-top:0.1rem;">${getSubjectNames(s.subject_ids)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderStudentSubjects() {
+  const el = document.getElementById('stu-subject-select');
+  el.innerHTML = '<option value="">전체 과목</option>' +
+    subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+document.getElementById('stu-add-btn').addEventListener('click', async () => {
+  const raw = document.getElementById('stu-names').value.trim();
+  if (!raw) { toast('이름을 입력하세요.', 'error'); return; }
+  const names = raw.split(/[,\n]+/).map(n => n.trim()).filter(Boolean);
+  if (!names.length) { toast('이름을 입력하세요.', 'error'); return; }
+
+  const subjectId = document.getElementById('stu-subject-select').value;
+  const subjectIds = subjectId ? [subjectId] : [];
+
+  const rows = names.map(name => ({ name, subject_ids: subjectIds }));
+  const { error } = await sb.from('students').insert(rows);
+  if (error) { toast('추가 실패: ' + error.message, 'error'); return; }
+  toast(`${names.length}명 등록됨`, 'success');
+  document.getElementById('stu-names').value = '';
+  document.getElementById('stu-form-wrap').style.display = 'none';
+  document.getElementById('stu-toggle-form').style.display = '';
+  loadStudents();
+});
+
+window.toggleStudent = async (id, active) => {
+  await sb.from('students').update({ is_active: active }).eq('id', id);
+  loadStudents();
+};
+
+window.deleteStudent = async (id) => {
+  if (!confirm('이 학생을 삭제하시겠습니까?')) return;
+  await sb.from('students').delete().eq('id', id);
+  toast('삭제됨', 'success');
+  loadStudents();
+};
+
+// ── 학생 수정 모달 ──────────────────────────────────────────
+let editingStudentId = null;
+
+window.editStudent = (id) => {
+  const s = allStudents.find(x => x.id === id);
+  if (!s) return;
+  editingStudentId = id;
+  document.getElementById('stu-edit-name').value = s.name;
+  const el = document.getElementById('stu-edit-subjects');
+  el.innerHTML = subjects.map(sub =>
+    `<label style="display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;font-size:0.88rem;cursor:pointer;"><input type="checkbox" value="${sub.id}" style="width:16px;height:16px;flex-shrink:0;" ${(s.subject_ids || []).includes(sub.id) ? 'checked' : ''}><span>${sub.name}</span></label>`
+  ).join('');
+  const delLink = document.getElementById('stu-edit-delete');
+  delLink.onclick = (e) => { e.preventDefault(); deleteStudent(id); document.getElementById('stu-edit-modal').classList.add('hidden'); };
+  document.getElementById('stu-edit-modal').classList.remove('hidden');
+};
+
+document.getElementById('stu-edit-cancel').addEventListener('click', () => {
+  document.getElementById('stu-edit-modal').classList.add('hidden');
+  editingStudentId = null;
+});
+
+document.getElementById('stu-edit-save').addEventListener('click', async () => {
+  if (!editingStudentId) return;
+  const name = document.getElementById('stu-edit-name').value.trim();
+  if (!name) { toast('이름을 입력하세요.', 'error'); return; }
+  const subjectIds = [...document.querySelectorAll('#stu-edit-subjects input:checked')].map(cb => cb.value);
+  const { error } = await sb.from('students').update({ name, subject_ids: subjectIds }).eq('id', editingStudentId);
+  if (error) { toast('수정 실패: ' + error.message, 'error'); return; }
+  toast('수정됨', 'success');
+  document.getElementById('stu-edit-modal').classList.add('hidden');
+  editingStudentId = null;
+  loadStudents();
+});
+
+// ============================================================
+// 과목 문제 복사
+// ============================================================
+let copyTargetSubjectId = null;
+
+window.copySubjectQuestions = (targetId) => {
+  copyTargetSubjectId = targetId;
+  const sel = document.getElementById('copy-source-subject');
+  sel.innerHTML = subjects
+    .filter(s => s.id !== targetId)
+    .map(s => `<option value="${s.id}">${s.name}</option>`)
+    .join('');
+  if (!sel.options.length) { toast('복사할 수 있는 다른 과목이 없습니다.', 'error'); return; }
+  document.getElementById('copy-status').textContent = '';
+  document.getElementById('copy-modal').classList.remove('hidden');
+};
+
+document.getElementById('copy-cancel-btn').addEventListener('click', () => {
+  document.getElementById('copy-modal').classList.add('hidden');
+  copyTargetSubjectId = null;
+});
+
+document.getElementById('copy-save-btn').addEventListener('click', async () => {
+  if (!copyTargetSubjectId) return;
+  const sourceId = document.getElementById('copy-source-subject').value;
+  if (!sourceId) { toast('원본 과목을 선택하세요.', 'error'); return; }
+
+  const status = document.getElementById('copy-status');
+
+  // 대상 과목에 이미 Day가 있는지 확인
+  const { data: existingDays } = await sb.from('days').select('id').eq('subject_id', copyTargetSubjectId);
+  if (existingDays && existingDays.length > 0) {
+    if (!confirm(`대상 과목에 이미 ${existingDays.length}개의 Day가 있습니다. 기존 Day는 유지되고, 원본의 Day가 추가됩니다. 계속하시겠습니까?`)) return;
+  }
+
+  status.textContent = '복사 중...';
+  document.getElementById('copy-save-btn').disabled = true;
+
+  try {
+    // 원본 과목의 모든 Day 가져오기
+    const { data: srcDays } = await sb.from('days')
+      .select('*')
+      .eq('subject_id', sourceId)
+      .order('sort_order');
+
+    if (!srcDays || !srcDays.length) {
+      toast('원본 과목에 Day가 없습니다.', 'error');
+      status.textContent = '';
+      document.getElementById('copy-save-btn').disabled = false;
+      return;
+    }
+
+    let totalQuestions = 0;
+
+    for (const srcDay of srcDays) {
+      // 새 Day 생성
+      const { data: newDay, error: dErr } = await sb.from('days').insert({
+        subject_id: copyTargetSubjectId,
+        day_number: srcDay.day_number,
+        title: srcDay.title,
+        lesson: srcDay.lesson,
+        sort_order: srcDay.sort_order,
+        ai_generated: srcDay.ai_generated
+      }).select().single();
+
+      if (dErr) { toast('Day 복사 실패: ' + dErr.message, 'error'); continue; }
+
+      // 원본 Day의 문제 가져와서 복사
+      const { data: srcQuestions } = await sb.from('questions')
+        .select('*').eq('day_id', srcDay.id).order('sort_order');
+
+      if (srcQuestions && srcQuestions.length) {
+        const rows = srcQuestions.map(q => ({
+          day_id: newDay.id,
+          template_id: q.template_id,
+          data: q.data,
+          sort_order: q.sort_order
+        }));
+        await sb.from('questions').insert(rows);
+        totalQuestions += srcQuestions.length;
+      }
+    }
+
+    toast(`${srcDays.length}개 Day, ${totalQuestions}개 문제가 복사되었습니다!`, 'success');
+    document.getElementById('copy-modal').classList.add('hidden');
+    copyTargetSubjectId = null;
+    loadSubjects();
+  } catch (e) {
+    toast('복사 실패: ' + e.message, 'error');
+    status.textContent = '오류: ' + e.message;
+  }
+  document.getElementById('copy-save-btn').disabled = false;
+});
+
+// ============================================================
+// 과목 문제 초기화
+// ============================================================
+window.resetSubjectQuestions = async (subjectId) => {
+  const subj = subjects.find(s => s.id === subjectId);
+  if (!subj) return;
+
+  if (!confirm(`"${subj.name}" 과목의 모든 Day의 문제를 초기화합니다.\n모든 문제가 삭제되고, AI 생성 상태가 초기화됩니다.\n\n계속하시겠습니까?`)) return;
+
+  try {
+    // 해당 과목의 모든 Day 가져오기
+    const { data: days } = await sb.from('days').select('id').eq('subject_id', subjectId);
+    if (!days || !days.length) { toast('Day가 없습니다.', 'error'); return; }
+
+    const dayIds = days.map(d => d.id);
+
+    // 모든 Day의 문제 삭제
+    const { error: qErr } = await sb.from('questions').delete().in('day_id', dayIds);
+    if (qErr) { toast('문제 삭제 실패: ' + qErr.message, 'error'); return; }
+
+    // 모든 Day의 ai_generated를 false로
+    const { error: dErr } = await sb.from('days').update({ ai_generated: false }).eq('subject_id', subjectId);
+    if (dErr) { toast('Day 상태 초기화 실패: ' + dErr.message, 'error'); return; }
+
+    toast(`"${subj.name}" 과목의 문제가 초기화되었습니다.`, 'success');
+    loadSubjects();
+  } catch (e) {
+    toast('초기화 실패: ' + e.message, 'error');
+  }
+};
+
+// ============================================================
+// 쪽지
+// ============================================================
+document.getElementById('msg-compose-toggle').addEventListener('click', () => {
+  loadMsgRecipients();
+  document.getElementById('msg-content').value = '';
+  document.getElementById('msg-compose-modal').classList.remove('hidden');
+});
+
+document.getElementById('msg-compose-cancel').addEventListener('click', () => {
+  document.getElementById('msg-compose-modal').classList.add('hidden');
+});
+
+async function loadMsgRecipients() {
+  const sel = document.getElementById('msg-to');
+  const { data } = await sb.from('students').select('id, name').eq('is_active', true).order('name');
+  sel.innerHTML = '<option value="__all__">전체 학생</option>' +
+    (data || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+document.getElementById('msg-send-btn').addEventListener('click', async () => {
+  const toVal = document.getElementById('msg-to').value;
+  const title = '';
+  const content = document.getElementById('msg-content').value.trim();
+  if (!content) { toast('내용을 입력하세요.', 'error'); return; }
+
+  if (toVal === '__all__') {
+    const { data: students } = await sb.from('students').select('id').eq('is_active', true);
+    if (!students || !students.length) { toast('학생이 없습니다.', 'error'); return; }
+    const rows = students.map(s => ({ student_id: s.id, title, content, sender_type: 'admin', sender_name: '선생님' }));
+    const { error } = await sb.from('messages').insert(rows);
+    if (error) { toast('전송 실패: ' + error.message, 'error'); return; }
+    toast(`${students.length}명에게 전송됨`, 'success');
+  } else {
+    const { error } = await sb.from('messages').insert({ student_id: toVal, title, content, sender_type: 'admin', sender_name: '선생님' });
+    if (error) { toast('전송 실패: ' + error.message, 'error'); return; }
+    toast('전송됨', 'success');
+  }
+
+  document.getElementById('msg-content').value = '';
+  document.getElementById('msg-compose-modal').classList.add('hidden');
+  loadMessages();
+});
+
+document.getElementById('msg-filter').addEventListener('change', loadMessages);
+
+async function updateUnreadBadge() {
+  const { count } = await sb.from('messages').select('*', { count: 'exact', head: true }).eq('sender_type', 'student').eq('is_read', false);
+  const badge = document.getElementById('msg-unread-badge');
+  if (count > 0) { badge.textContent = count; badge.style.display = ''; }
+  else { badge.style.display = 'none'; }
+}
+
+async function loadMessages() {
+  const filter = document.getElementById('msg-filter').value;
+  const studentFilter = document.getElementById('msg-student-filter').value;
+  const el = document.getElementById('msg-list');
+  updateUnreadBadge();
+
+  // 학생 필터 드롭다운 업데이트
+  const stuSel = document.getElementById('msg-student-filter');
+  if (stuSel.options.length <= 1) {
+    const { data: stuList } = await sb.from('students').select('id, name').eq('is_active', true).order('name');
+    stuSel.innerHTML = '<option value="">전체 학생</option>' + (stuList || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+    if (studentFilter) stuSel.value = studentFilter;
+  }
+
+  // 전체 메시지 로드
+  let query = sb.from('messages').select('*, students(name)').order('created_at', { ascending: false }).limit(100);
+  if (filter === 'sent') query = query.eq('sender_type', 'admin');
+  else if (filter === 'received') query = query.eq('sender_type', 'student');
+  if (studentFilter) query = query.eq('student_id', studentFilter);
+
+  const { data, error } = await query;
+  if (error) { toast('채팅 로드 실패', 'error'); return; }
+  const msgs = data || [];
+
+  if (!msgs.length) {
+    el.innerHTML = '<p style="color:#999;text-align:center;padding:1rem;">채팅이 없습니다.</p>';
+    return;
+  }
+
+  // 학생별로 그룹핑
+  const threads = {};
+  msgs.forEach(m => {
+    const sid = m.student_id;
+    if (!threads[sid]) threads[sid] = { name: m.students?.name || m.sender_name || '', messages: [] };
+    threads[sid].messages.push(m);
+  });
+
+  const threadList = Object.entries(threads).sort((a, b) => {
+    const aUnread = a[1].messages.some(m => m.sender_type === 'student' && !m.is_read);
+    const bUnread = b[1].messages.some(m => m.sender_type === 'student' && !m.is_read);
+    if (aUnread && !bUnread) return -1;
+    if (!aUnread && bUnread) return 1;
+    return new Date(b[1].messages[0].created_at) - new Date(a[1].messages[0].created_at);
+  });
+
+  // 목록 뷰
+  el.innerHTML = threadList.map(([sid, thread]) => {
+    const latest = thread.messages[0];
+    const hasUnread = thread.messages.some(m => m.sender_type === 'student' && !m.is_read);
+    const unreadCount = thread.messages.filter(m => m.sender_type === 'student' && !m.is_read).length;
+    const latestDt = new Date(latest.created_at);
+    const latestTime = `${String(latestDt.getMonth()+1).padStart(2,'0')}-${String(latestDt.getDate()).padStart(2,'0')} ${String(latestDt.getHours()).padStart(2,'0')}:${String(latestDt.getMinutes()).padStart(2,'0')}`;
+    return `<div class="msg-thread-item" data-student="${sid}" data-name="${thread.name}" style="display:flex;align-items:center;gap:0.8rem;padding:0.7rem 0;border-bottom:1px solid #f2f4f6;cursor:pointer;transition:background 0.2s;">
+      <div style="width:32px;height:32px;border-radius:50%;background:${hasUnread ? '#3182f6' : '#d5dae0'};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.82rem;flex-shrink:0;">${thread.name.charAt(0)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:700;font-size:0.9rem;color:#191f28;">${thread.name}</span>
+          <span style="font-size:0.7rem;color:#b0b8c1;">${latestTime}</span>
+        </div>
+        <div style="font-size:0.8rem;color:#8b95a1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${latest.sender_type === 'admin' ? '나: ' : ''}${latest.content}</div>
+      </div>
+      ${unreadCount ? `<span style="background:#f04452;color:#fff;font-size:0.68rem;min-width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${unreadCount}</span>` : ''}
+    </div>`;
+  }).join('');
+
+  // 클릭 → 대화창 열기
+  el.querySelectorAll('.msg-thread-item').forEach(item => {
+    item.addEventListener('mouseenter', () => item.style.background = '#f8f8f8');
+    item.addEventListener('mouseleave', () => item.style.background = '');
+    item.addEventListener('click', () => openThreadChat(item.dataset.student, item.dataset.name, msgs));
+  });
+}
+
+document.getElementById('msg-student-filter').addEventListener('change', loadMessages);
+
+let openChatStudentId = null;
+let openChatStudentName = null;
+
+async function openThreadChat(studentId, studentName, allMsgs) {
+  openChatStudentId = studentId;
+  openChatStudentName = studentName;
+  const threadMsgs = allMsgs.filter(m => m.student_id === studentId).slice().reverse();
+
+  // 읽음 처리
+  const unreadIds = threadMsgs.filter(m => m.sender_type === 'student' && !m.is_read).map(m => m.id);
+  if (unreadIds.length) {
+    await sb.from('messages').update({ is_read: true }).in('id', unreadIds);
+    updateUnreadBadge();
+  }
+
+  // 모달에 내용 채우기
+  document.getElementById('msg-chat-name').textContent = studentName;
+  const chatArea = document.getElementById('msg-chat-area');
+  chatArea.innerHTML = threadMsgs.map(m => {
+    const dt = new Date(m.created_at);
+    const ts = `${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    const isAdmin = m.sender_type === 'admin';
+    return `<div style="display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-end' : 'flex-start'};margin-bottom:0.5rem;">
+      <div style="background:${isAdmin ? '#eff6ff' : '#f7f8fa'};padding:0.5rem 0.8rem;border-radius:${isAdmin ? '10px 10px 2px 10px' : '10px 10px 10px 2px'};max-width:80%;font-size:0.85rem;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;">${m.content}</div>
+      <span style="font-size:0.68rem;color:#b0b8c1;margin-top:0.1rem;">${isAdmin ? '선생님' : studentName} · ${ts}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('msg-chat-modal').classList.remove('hidden');
+  setTimeout(() => { chatArea.scrollTop = chatArea.scrollHeight; document.getElementById('msg-chat-input').focus(); }, 50);
+
+  // 이벤트 (재바인딩 방지)
+  const backBtn = document.getElementById('msg-back-btn');
+  const sendBtn = document.getElementById('msg-chat-send');
+  const inputEl = document.getElementById('msg-chat-input');
+  const delBtn = document.getElementById('msg-delete-thread');
+
+  backBtn.onclick = () => { openChatStudentId = null; openChatStudentName = null; document.getElementById('msg-chat-modal').classList.add('hidden'); };
+  sendBtn.onclick = async () => {
+    const content = inputEl.value.trim();
+    if (!content) { toast('메시지를 입력하세요.', 'error'); return; }
+    const { error } = await sb.from('messages').insert({ student_id: studentId, title: '', content, sender_type: 'admin', sender_name: '선생님' });
+    if (error) { toast('전송 실패', 'error'); return; }
+    inputEl.value = '';
+    const { data: refreshed } = await sb.from('messages').select('*, students(name)').order('created_at', { ascending: false }).limit(100);
+    openThreadChat(studentId, studentName, refreshed || []);
+  };
+  inputEl.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtn.click(); } };
+  delBtn.onclick = async (e) => {
+    e.preventDefault();
+    if (!confirm(`${studentName}과의 대화를 모두 삭제하시겠습니까?`)) return;
+    await sb.from('messages').delete().eq('student_id', studentId);
+    toast('삭제됨', 'success');
+    document.getElementById('msg-chat-modal').classList.add('hidden');
+    openChatStudentId = null; openChatStudentName = null;
+    loadMessages();
+  };
+}
+
+window.deleteMsg = async (id) => {
+  await sb.from('messages').delete().eq('id', id);
+  loadMessages();
+};
+
+// ============================================================
+// 공지사항
+// ============================================================
+async function loadNotices() {
+  const { data } = await sb.from('notices').select('*').order('created_at', { ascending: false });
+  const el = document.getElementById('notices-list');
+  const notices = data || [];
+  if (!notices.length) { el.innerHTML = '<p style="color:#999;">등록된 공지가 없습니다.</p>'; return; }
+  el.innerHTML = notices.map(n => {
+    const dt = new Date(n.created_at);
+    const ts = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    return `<div style="display:flex;align-items:center;gap:0.8rem;padding:0.7rem 0;border-bottom:1px solid #f2f4f6;${n.is_active ? '' : 'opacity:0.5;'}">
+      <div style="flex:1;min-width:0;cursor:pointer;" onclick="editNotice('${n.id}')">
+        <div style="font-size:0.88rem;color:#191f28;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.content}</div>
+        <div style="font-size:0.72rem;color:#8b95a1;margin-top:0.15rem;">${ts}${n.subject_id ? '' : ' · 전체'}</div>
+      </div>
+      <button class="btn btn-sm" onclick="toggleNotice('${n.id}', ${!n.is_active})" style="background:${n.is_active ? '#7c3aed' : '#e5e8eb'};color:${n.is_active ? '#fff' : '#8b95a1'};font-size:0.7rem;padding:0.25rem 0.55rem;flex-shrink:0;">${n.is_active ? '발행됨' : '숨김'}</button>
+    </div>`;
+  }).join('');
+}
+
+let editingNoticeId = null;
+
+function openNoticeModal(id) {
+  const sel = document.getElementById('notice-subject');
+  sel.innerHTML = '<option value="">전체 (공통)</option>' +
+    subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+  if (id) {
+    // 수정 모드
+    const allNotices = document.getElementById('notices-list');
+    // DB에서 가져오기
+    sb.from('notices').select('*').eq('id', id).single().then(({ data: n }) => {
+      if (!n) return;
+      editingNoticeId = id;
+      document.getElementById('notice-modal-title').textContent = '공지 수정';
+      document.getElementById('notice-content').value = n.content;
+      if (n.subject_id) sel.value = n.subject_id;
+      const delLink = document.getElementById('notice-delete-link');
+      delLink.style.display = '';
+      delLink.onclick = (e) => { e.preventDefault(); deleteNotice(id); document.getElementById('notice-modal').classList.add('hidden'); };
+      document.getElementById('notice-modal').classList.remove('hidden');
+    });
+  } else {
+    // 새 작성
+    editingNoticeId = null;
+    document.getElementById('notice-modal-title').textContent = '공지 작성';
+    document.getElementById('notice-content').value = '';
+    document.getElementById('notice-delete-link').style.display = 'none';
+    document.getElementById('notice-modal').classList.remove('hidden');
+  }
+}
+
+document.getElementById('notice-toggle-form').addEventListener('click', () => openNoticeModal(null));
+window.editNotice = (id) => openNoticeModal(id);
+
+document.getElementById('notice-cancel-btn').addEventListener('click', () => {
+  document.getElementById('notice-modal').classList.add('hidden');
+});
+
+document.getElementById('notice-add-btn').addEventListener('click', async () => {
+  const content = document.getElementById('notice-content').value.trim();
+  if (!content) { toast('내용을 입력하세요.', 'error'); return; }
+  const subjectId = document.getElementById('notice-subject').value || null;
+
+  if (editingNoticeId) {
+    const { error } = await sb.from('notices').update({ content, subject_id: subjectId }).eq('id', editingNoticeId);
+    if (error) { toast('수정 실패: ' + error.message, 'error'); return; }
+    toast('공지 수정됨', 'success');
+  } else {
+    const { error } = await sb.from('notices').insert({ content, subject_id: subjectId });
+    if (error) { toast('등록 실패: ' + error.message, 'error'); return; }
+    toast('공지 등록됨', 'success');
+  }
+
+  document.getElementById('notice-modal').classList.add('hidden');
+  editingNoticeId = null;
+  loadNotices();
+});
+
+window.toggleNotice = async (id, active) => {
+  await sb.from('notices').update({ is_active: active }).eq('id', id);
+  loadNotices();
+};
+
+window.deleteNotice = async (id) => {
+  if (!confirm('삭제하시겠습니까?')) return;
+  await sb.from('notices').delete().eq('id', id);
+  toast('삭제됨', 'success');
+  loadNotices();
+};
+
+</script>
+</body>
+</html>

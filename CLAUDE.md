@@ -17,7 +17,7 @@ Jung's Quiz — 관리자 모드를 갖춘 퀴즈 플랫폼. 선생님이 코드
 
 | 파일 | 설명 |
 |---|---|
-| `index.html` | 학생용 퀴즈 SPA. 6종 렌더러(객관식/빈칸채우기/단어장/OX/문장배열/매칭) |
+| `index.html` | 학생용 퀴즈 SPA. 7종 렌더러(객관식/빈칸채우기/단어장/OX/문장배열/매칭/구문독해) |
 | `admin.html` | 관리자 SPA. 과목/퀴즈/학생/결과 관리 + AI 문제 생성 |
 | `supabase/schema.sql` | DB 스키마 (Supabase SQL Editor에서 실행) |
 
@@ -27,7 +27,8 @@ Jung's Quiz — 관리자 모드를 갖춘 퀴즈 플랫폼. 선생님이 코드
 - 관리자 인증: Supabase Auth (이메일+비밀번호)
 - 학생 인증: 이름 기반 (students 테이블 조회)
 - 문제 데이터: `questions` 테이블의 `data` JSONB 컬럼에 템플릿별 구조 저장
-- 과목의 `quiz_types` JSONB: `[{"templateId":"multiple-choice","label":"문법확인"}, ...]`
+- 과목의 `quiz_types` JSONB: `[{"templateId":"multiple-choice","label":"문법확인","aiDescription":"..."}, ...]`
+- 커스텀 유형 지원: `{"templateId":"custom-id","label":"표시이름","custom":true,"aiDescription":"AI 생성 설명"}` — 기본 객관식 구조로 렌더링
 
 ## Quiz Template Types
 
@@ -39,6 +40,8 @@ Jung's Quiz — 관리자 모드를 갖춘 퀴즈 플랫폼. 선생님이 코드
 | `true-false` | OX퀴즈 | `{statement, answer(bool), explanation}` |
 | `ordering` | 문장배열 | `{instruction, items[], correctOrder[]}` |
 | `matching` | 매칭 | `{pairs[{left, right}]}` |
+| `reading-comprehension` | 구문독해 | `{passage, question, options[], correctIndex, explanation}` |
+| *(커스텀)* | 자유 입력 | 기본: `{question, options[], correctIndex, explanation}` |
 
 ## Commands
 

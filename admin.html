@@ -118,11 +118,27 @@
   .q-card-actions { display: flex; gap: 0.4rem; align-items: center; }
 
   /* ── Quiz Type Checkboxes ────────────────────────────── */
-  .qt-grid { display: flex; flex-direction: column; gap: 0.5rem; }
-  .qt-row { display: flex; align-items: center; gap: 0.8rem; padding: 0.3rem 0; }
+  .qt-grid { display: flex; flex-direction: column; gap: 0; }
+  .qt-row { display: grid; grid-template-columns: 22px 80px 1fr; align-items: center; gap: 0.4rem 0.6rem; padding: 0.5rem 0; border-bottom: 1px solid #f2f4f6; }
+  .qt-row:last-child { border-bottom: none; }
   .qt-row input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #3182f6; }
-  .qt-row .qt-name { font-size: 0.85rem; font-weight: 600; min-width: 90px; color: #4e5968; }
-  .qt-row input[type="text"] { flex: 1; padding: 0.45rem 0.7rem; border: none; background: #f2f4f6; border-radius: 8px; font-size: 0.85rem; }
+  .qt-row .qt-name { font-size: 0.85rem; font-weight: 600; color: #4e5968; white-space: nowrap; }
+  .qt-row input[type="text"] { padding: 0.4rem 0.6rem; border: none; background: #f2f4f6; border-radius: 8px; font-size: 0.85rem; min-width: 0; }
+  .qt-row .qt-ai-desc { grid-column: 2 / -1; padding: 0.35rem 0.6rem; background: #fff8f0; border: 1px dashed #f59e0b; border-radius: 8px; font-size: 0.8rem; color: #92400e; }
+  .qt-row .qt-remove-btn { background: none; border: none; color: #f04452; cursor: pointer; font-size: 1.1rem; padding: 0 0.3rem; }
+  .qt-row.custom-qt { grid-template-columns: 22px 80px 1fr auto; }
+  .qt-row.custom-qt .qt-ai-desc { grid-column: 2 / -1; }
+
+  /* ── Quiz Template Manager ─────────────────────────── */
+  .qtm-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0; border-bottom: 1px solid #f2f4f6; }
+  .qtm-item:last-child { border-bottom: none; }
+  .qtm-id { font-size: 0.78rem; color: #8b95a1; font-family: monospace; min-width: 120px; }
+  .qtm-name { font-size: 0.85rem; font-weight: 600; color: #4e5968; flex: 1; }
+  .qtm-badge { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 10px; white-space: nowrap; }
+  .qtm-badge.builtin { background: #eff6ff; color: #3b82f6; }
+  .qtm-badge.custom { background: #fff8f0; color: #f59e0b; }
+  .qtm-del { background: none; border: none; color: #d1d5db; cursor: pointer; font-size: 1rem; padding: 0 0.3rem; transition: color 0.15s; }
+  .qtm-del:hover { color: #f04452; }
 
   /* ── Toast ────────────────────────────────────────────── */
   .toast {
@@ -270,19 +286,15 @@
           <div id="subj-ai-files-list" style="margin-top:0.5rem;"></div>
         </div>
         <div style="display:flex;gap:1rem;">
-          <div class="form-group" style="flex:1;"><label>기본 Day 수</label><input type="number" id="subj-default-days" value="20" min="1" max="100" /></div>
-          <div class="form-group" style="flex:1;"><label>Day당 문제 수</label><input type="number" id="subj-default-qs" value="10" min="1" max="50" /></div>
+          <div class="form-group" ><label>기본 Day 수</label><input type="number" id="subj-default-days" value="20" min="1" max="100" /></div>
+          <div class="form-group" ><label>Day당 문제 수</label><input type="number" id="subj-default-qs" value="10" min="1" max="50" /></div>
         </div>
         <div class="form-group">
-          <label>사용할 문제 유형</label>
-          <div class="qt-grid" id="subj-qt">
-            <div class="qt-row"><input type="checkbox" value="multiple-choice" checked><span class="qt-name">객관식</span><input type="text" value="객관식" placeholder="표시 이름"></div>
-            <div class="qt-row"><input type="checkbox" value="fill-in-blank" checked><span class="qt-name">빈칸채우기</span><input type="text" value="빈칸채우기" placeholder="표시 이름"></div>
-            <div class="qt-row"><input type="checkbox" value="vocabulary"><span class="qt-name">단어장</span><input type="text" value="단어장" placeholder="표시 이름"></div>
-            <div class="qt-row"><input type="checkbox" value="true-false"><span class="qt-name">OX퀴즈</span><input type="text" value="OX퀴즈" placeholder="표시 이름"></div>
-            <div class="qt-row"><input type="checkbox" value="ordering"><span class="qt-name">문장배열</span><input type="text" value="문장배열" placeholder="표시 이름"></div>
-            <div class="qt-row"><input type="checkbox" value="matching"><span class="qt-name">매칭</span><input type="text" value="매칭" placeholder="표시 이름"></div>
-          </div>
+          <label style="display:flex;justify-content:space-between;align-items:center;">
+            사용할 문제 유형
+            <button type="button" class="btn btn-sm" style="background:#3182f6;color:#fff;" onclick="openQtManager()">⚙ 유형 관리</button>
+          </label>
+          <div class="qt-grid" id="subj-qt"><!-- 동적 렌더링 --></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -290,6 +302,30 @@
           <button class="btn btn-primary" id="subj-add-btn">저장</button>
           <button class="btn btn-secondary" id="subj-cancel-btn">취소</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 문제 유형 관리 모달 ──────────────────────────────── -->
+  <div class="modal-overlay hidden" id="qt-manager-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>문제 유형 관리</h3>
+        <button class="close-btn" onclick="closeQtManager()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.82rem;color:#8b95a1;margin-bottom:0.8rem;">과목 생성 시 선택 가능한 문제 유형을 관리합니다. 삭제해도 이미 사용 중인 과목에는 영향 없습니다.</p>
+        <div id="qt-manager-list"></div>
+        <div style="margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid #f2f4f6;">
+          <div style="font-size:0.82rem;font-weight:600;color:#4e5968;margin-bottom:0.5rem;">새 유형 추가</div>
+          <div style="display:flex;gap:0.4rem;">
+            <input type="text" id="qt-new-name" placeholder="표시 이름 (예: 받아쓰기)" style="flex:1;padding:0.4rem 0.6rem;border:none;background:#f2f4f6;border-radius:8px;font-size:0.85rem;" />
+            <button type="button" class="btn btn-primary btn-sm" style="white-space:nowrap;" onclick="addQtTemplate()">+ 추가</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeQtManager()">확인</button>
       </div>
     </div>
   </div>
@@ -424,7 +460,7 @@
         <span id="msg-chat-name" style="font-weight:700;font-size:1rem;"></span>
         <a href="#" id="msg-delete-thread" style="font-size:0.75rem;color:#f04452;text-decoration:none;"><span style="color:#d5dae0;margin-right:0.5rem;">|</span>대화 삭제</a>
       </div>
-      <span style="flex:1;"></span>
+      <span ></span>
       <button id="msg-back-btn" onclick="document.getElementById('msg-chat-modal').classList.add('hidden');openChatStudentId=null;openChatStudentName=null;" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#8b95a1;">✕</button>
     </div>
     <div id="msg-chat-area" style="flex:1;overflow-y:auto;overflow-x:hidden;padding:1rem;background:#f2f4f6;"></div>
@@ -570,14 +606,102 @@ function toast(msg, type = '') {
 }
 
 // ── Template definitions ──────────────────────────────────
-const TEMPLATES = {
+const BUILTIN_TEMPLATES = {
   'multiple-choice': { name: '객관식', fields: ['question', 'options', 'correctIndex', 'explanation'] },
   'fill-in-blank': { name: '빈칸채우기', fields: ['prompt', 'template', 'acceptedAnswers', 'explanation'] },
   'vocabulary': { name: '단어장', fields: ['word', 'meaning', 'example'] },
   'true-false': { name: 'OX퀴즈', fields: ['statement', 'answer', 'explanation'] },
   'ordering': { name: '문장배열', fields: ['instruction', 'items', 'correctOrder'] },
-  'matching': { name: '매칭', fields: ['pairs'] }
+  'matching': { name: '매칭', fields: ['pairs'] },
+  'reading-comprehension': { name: '구문독해', fields: ['passage', 'question', 'options', 'correctIndex', 'explanation'] }
 };
+
+// 동적 유형 목록 (settings 테이블에서 로드)
+let qtTemplates = []; // [{id, name, builtin}]
+const TEMPLATES = new Proxy({}, {
+  get(_, key) { return BUILTIN_TEMPLATES[key] || { name: qtTemplates.find(t => t.id === key)?.name || key, fields: [] }; },
+  has(_, key) { return key in BUILTIN_TEMPLATES || qtTemplates.some(t => t.id === key); }
+});
+
+async function loadQtTemplates() {
+  const { data } = await sb.from('settings').select('value').eq('key', 'quiz_templates').single();
+  if (data) {
+    qtTemplates = JSON.parse(data.value);
+  } else {
+    // 초기값: 빌트인 전부
+    qtTemplates = Object.entries(BUILTIN_TEMPLATES).map(([id, t]) => ({ id, name: t.name, builtin: true }));
+    await saveQtTemplates();
+  }
+}
+
+async function saveQtTemplates() {
+  await sb.from('settings').upsert({ key: 'quiz_templates', value: JSON.stringify(qtTemplates) });
+}
+
+// ── Quiz Template Manager ────────────────────────────────
+function openQtManager() {
+  renderQtManagerList();
+  document.getElementById('qt-manager-modal').classList.remove('hidden');
+}
+
+function closeQtManager() {
+  document.getElementById('qt-manager-modal').classList.add('hidden');
+  renderSubjectQtGrid(); // 과목 모달의 체크박스 목록 갱신
+}
+
+function renderQtManagerList() {
+  const list = document.getElementById('qt-manager-list');
+  if (!qtTemplates.length) {
+    list.innerHTML = '<p class="empty-state">등록된 문제 유형이 없습니다.</p>';
+    return;
+  }
+  list.innerHTML = qtTemplates.map((t, i) => `
+    <div class="qtm-item">
+      <span class="qtm-name">${t.name}</span>
+      <span class="qtm-badge ${t.builtin ? 'builtin' : 'custom'}">${t.builtin ? '기본' : '추가'}</span>
+      <button class="qtm-del" title="삭제" onclick="removeQtTemplate(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+async function addQtTemplate() {
+  const nameInput = document.getElementById('qt-new-name');
+  const name = nameInput.value.trim();
+  if (!name) { toast('표시 이름을 입력하세요.', 'error'); return; }
+  let id = 'custom-' + Date.now().toString(36);
+  if (qtTemplates.some(t => t.id === id)) { id += '-' + Math.random().toString(36).slice(2, 5); }
+  qtTemplates.push({ id, name, builtin: false });
+  await saveQtTemplates();
+  nameInput.value = '';
+  renderQtManagerList();
+  toast(`"${name}" 유형이 추가되었습니다.`, 'success');
+}
+
+async function removeQtTemplate(idx) {
+  const t = qtTemplates[idx];
+  if (!confirm(`"${t.name}" 유형을 목록에서 삭제하시겠습니까?\n이미 사용 중인 과목에는 영향 없습니다.`)) return;
+  qtTemplates.splice(idx, 1);
+  await saveQtTemplates();
+  renderQtManagerList();
+  toast(`"${t.name}" 유형이 삭제되었습니다.`, 'success');
+}
+
+// 과목 모달의 체크박스 목록을 동적 렌더링
+function renderSubjectQtGrid(selected) {
+  const grid = document.getElementById('subj-qt');
+  grid.innerHTML = qtTemplates.map(t => {
+    const sel = selected?.find(s => s.templateId === t.id);
+    const checked = sel ? 'checked' : '';
+    const label = sel?.label || t.name;
+    const aiDesc = sel?.aiDescription || '';
+    return `<div class="qt-row">
+      <input type="checkbox" value="${t.id}" ${checked}>
+      <span class="qt-name">${t.name}</span>
+      <input type="text" value="${label}" placeholder="표시 이름">
+      <input type="text" class="qt-ai-desc" value="${aiDesc}" placeholder="AI 생성 설명">
+    </div>`;
+  }).join('');
+}
 
 // ============================================================
 // Auth
@@ -612,6 +736,7 @@ async function showAdmin() {
   document.getElementById('admin-header').style.display = '';
   document.getElementById('admin-nav').style.display = '';
   document.getElementById('admin-content').style.display = '';
+  await loadQtTemplates();
   await loadSubjects();
   loadStudents();
   updateUnreadBadge();
@@ -739,7 +864,7 @@ function renderSubjectsList() {
 // slug 자동 생성
 function toSlug(str) {
   return str.toLowerCase().replace(/[가-힣]+/g, s => {
-    const m = {'초급':'beginner','중급':'intermediate','고급':'advanced','문법':'grammar','독해':'reading','듣기':'listening','작문':'writing'};
+    const m = {'초급':'beginner','중급':'intermediate','고급':'advanced','문법':'grammar','독해':'reading','듣기':'listening','작문':'writing','구문':'syntax'};
     for (const [k,v] of Object.entries(m)) if (s.includes(k)) return v;
     return '';
   }).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'course-' + Date.now();
@@ -801,13 +926,14 @@ function resetSubjectForm() {
   pendingFiles = [];
   existingFiles = [];
   renderFilesList();
-  document.querySelectorAll('#subj-qt .qt-row input[type="checkbox"]').forEach(cb => cb.checked = false);
+  renderSubjectQtGrid();
   const btn = document.getElementById('subj-add-btn');
   delete btn.dataset.editId;
   btn.textContent = '저장';
   document.getElementById('subj-form-title').textContent = '새 과목 추가';
   document.getElementById('subj-delete-link').style.display = 'none';
 }
+
 
 document.getElementById('subj-toggle-form').addEventListener('click', () => {
   resetSubjectForm();
@@ -846,7 +972,12 @@ document.getElementById('subj-add-btn').addEventListener('click', async () => {
   document.querySelectorAll('#subj-qt .qt-row').forEach(row => {
     const cb = row.querySelector('input[type="checkbox"]');
     if (cb.checked) {
-      quizTypes.push({ templateId: cb.value, label: row.querySelector('input[type="text"]').value || TEMPLATES[cb.value]?.name || cb.value });
+      const templateId = cb.value;
+      const label = row.querySelector('input[type="text"]:not(.qt-ai-desc)')?.value || templateId;
+      const aiDesc = row.querySelector('.qt-ai-desc')?.value.trim() || '';
+      const entry = { templateId, label };
+      if (aiDesc) entry.aiDescription = aiDesc;
+      quizTypes.push(entry);
     }
   });
 
@@ -901,13 +1032,7 @@ window.editSubject = (id) => {
   renderFilesList();
   document.getElementById('subj-default-days').value = s.default_days || 20;
   document.getElementById('subj-default-qs').value = s.default_questions || 10;
-  document.querySelectorAll('#subj-qt .qt-row').forEach(row => {
-    const cb = row.querySelector('input[type="checkbox"]');
-    const txt = row.querySelector('input[type="text"]');
-    const qt = (s.quiz_types || []).find(q => q.templateId === cb.value);
-    cb.checked = !!qt;
-    if (qt) txt.value = qt.label;
-  });
+  renderSubjectQtGrid(s.quiz_types || []);
   const addBtn = document.getElementById('subj-add-btn');
   addBtn.textContent = '저장';
   addBtn.dataset.editId = id;
@@ -1096,6 +1221,12 @@ function renderQuestionCard(q, idx, templateId) {
     case 'matching':
       preview = (d.pairs || []).map(p => `${p.left}↔${p.right}`).join(', ');
       break;
+    case 'reading-comprehension':
+      preview = `${(d.passage || '').slice(0, 60)}… → ${d.question || ''}`;
+      break;
+    default:
+      preview = d.question || d.prompt || d.passage || JSON.stringify(d).slice(0, 80);
+      break;
   }
 
   return `
@@ -1122,7 +1253,8 @@ function getDefaultData(templateId) {
     case 'true-false': return { statement: '', answer: true, explanation: '' };
     case 'ordering': return { instruction: '올바른 순서로 배열하세요.', items: [''], correctOrder: [''] };
     case 'matching': return { pairs: [{ left: '', right: '' }] };
-    default: return {};
+    case 'reading-comprehension': return { passage: '', question: '', options: ['', '', '', ''], correctIndex: 0, explanation: '' };
+    default: return { question: '', options: ['', '', '', ''], correctIndex: 0, explanation: '' };
   }
 }
 
@@ -1171,14 +1303,41 @@ function renderQEditForm(templateId, data) {
       return `
         <div id="qe-pairs">
           ${pairs.map((p, i) => `<div class="form-group" style="display:flex;gap:0.5rem;align-items:end;">
-            <div style="flex:1;"><label>${i===0?'왼쪽 (문제)':''}</label><input class="qe-left" value="${(p.left||'').replace(/"/g,'&quot;')}" placeholder="breakfast" /></div>
-            <div style="flex:1;"><label>${i===0?'오른쪽 (정답)':''}</label><input class="qe-right" value="${(p.right||'').replace(/"/g,'&quot;')}" placeholder="아침 식사" /></div>
+            <div ><label>${i===0?'왼쪽 (문제)':''}</label><input class="qe-left" value="${(p.left||'').replace(/"/g,'&quot;')}" placeholder="breakfast" /></div>
+            <div ><label>${i===0?'오른쪽 (정답)':''}</label><input class="qe-right" value="${(p.right||'').replace(/"/g,'&quot;')}" placeholder="아침 식사" /></div>
             <button class="btn btn-danger btn-sm" onclick="this.closest('.form-group').remove()" style="margin-bottom:1rem;">×</button>
           </div>`).join('')}
         </div>
         <button class="btn btn-secondary btn-sm" onclick="addMatchPair()">+ 쌍 추가</button>`;
+    case 'reading-comprehension':
+      return `
+        <div class="form-group"><label>영어 지문</label><textarea id="qe-passage" rows="4" placeholder="Despite the heavy rain, the workers continued to build the bridge because the deadline was approaching.">${(data.passage||'').replace(/</g,'&lt;')}</textarea></div>
+        <div class="form-group"><label>질문</label><input id="qe-rc-question" value="${(data.question||'').replace(/"/g,'&quot;')}" placeholder="이 문장의 올바른 해석은?" /></div>
+        <div class="form-group"><label>보기 A</label><input id="qe-rc-opt0" value="${(data.options?.[0]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>보기 B</label><input id="qe-rc-opt1" value="${(data.options?.[1]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>보기 C</label><input id="qe-rc-opt2" value="${(data.options?.[2]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>보기 D</label><input id="qe-rc-opt3" value="${(data.options?.[3]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>정답</label><select id="qe-rc-correct">
+          <option value="0" ${data.correctIndex===0?'selected':''}>A</option>
+          <option value="1" ${data.correctIndex===1?'selected':''}>B</option>
+          <option value="2" ${data.correctIndex===2?'selected':''}>C</option>
+          <option value="3" ${data.correctIndex===3?'selected':''}>D</option>
+        </select></div>
+        <div class="form-group"><label>해설 (구문 분석)</label><textarea id="qe-rc-explanation" rows="3" placeholder="Despite ~: ~에도 불구하고 (양보 부사구)">${(data.explanation||'').replace(/</g,'&lt;')}</textarea></div>`;
     default:
-      return '<p>지원하지 않는 유형</p>';
+      return `
+        <div class="form-group"><label>문장 / 질문</label><input id="qe-question" value="${(data.question||'').replace(/"/g,'&quot;')}" placeholder="문제 문장" /></div>
+        <div class="form-group"><label>보기 A</label><input id="qe-opt0" value="${(data.options?.[0]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>보기 B</label><input id="qe-opt1" value="${(data.options?.[1]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>보기 C</label><input id="qe-opt2" value="${(data.options?.[2]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>보기 D</label><input id="qe-opt3" value="${(data.options?.[3]||'').replace(/"/g,'&quot;')}" /></div>
+        <div class="form-group"><label>정답</label><select id="qe-correct">
+          <option value="0" ${data.correctIndex===0?'selected':''}>A</option>
+          <option value="1" ${data.correctIndex===1?'selected':''}>B</option>
+          <option value="2" ${data.correctIndex===2?'selected':''}>C</option>
+          <option value="3" ${data.correctIndex===3?'selected':''}>D</option>
+        </select></div>
+        <div class="form-group"><label>해설</label><input id="qe-explanation" value="${(data.explanation||'').replace(/"/g,'&quot;')}" /></div>`;
   }
 }
 
@@ -1189,8 +1348,8 @@ window.addMatchPair = () => {
   div.className = 'form-group';
   div.style.cssText = 'display:flex;gap:0.5rem;align-items:end;';
   div.innerHTML = `
-    <div style="flex:1;"><input class="qe-left" value="" placeholder="breakfast" /></div>
-    <div style="flex:1;"><input class="qe-right" value="" placeholder="아침 식사" /></div>
+    <div ><input class="qe-left" value="" placeholder="breakfast" /></div>
+    <div ><input class="qe-right" value="" placeholder="아침 식사" /></div>
     <button class="btn btn-danger btn-sm" onclick="this.closest('.form-group').remove()" style="margin-bottom:1rem;">×</button>`;
   container.appendChild(div);
 };
@@ -1244,7 +1403,31 @@ function collectFormData(templateId) {
         if (left || right) pairs.push({ left, right });
       });
       return { pairs };
-    default: return {};
+    case 'reading-comprehension':
+      return {
+        passage: document.getElementById('qe-passage').value.trim(),
+        question: document.getElementById('qe-rc-question').value.trim(),
+        options: [
+          document.getElementById('qe-rc-opt0').value.trim(),
+          document.getElementById('qe-rc-opt1').value.trim(),
+          document.getElementById('qe-rc-opt2').value.trim(),
+          document.getElementById('qe-rc-opt3').value.trim()
+        ],
+        correctIndex: parseInt(document.getElementById('qe-rc-correct').value),
+        explanation: document.getElementById('qe-rc-explanation').value.trim()
+      };
+    default:
+      return {
+        question: document.getElementById('qe-question').value.trim(),
+        options: [
+          document.getElementById('qe-opt0').value.trim(),
+          document.getElementById('qe-opt1').value.trim(),
+          document.getElementById('qe-opt2').value.trim(),
+          document.getElementById('qe-opt3').value.trim()
+        ],
+        correctIndex: parseInt(document.getElementById('qe-correct').value),
+        explanation: document.getElementById('qe-explanation').value.trim()
+      };
   }
 }
 

@@ -75,6 +75,8 @@
   .quiz-type-tag.tf { background: #fce7f3; color: #db2777; }
   .quiz-type-tag.ordering { background: #ede9fe; color: #7c3aed; }
   .quiz-type-tag.matching { background: #ecfdf5; color: #059669; }
+  .quiz-type-tag.reading { background: #fff7ed; color: #c2410c; }
+  .rc-passage { background: #f8fafc; border-left: 3px solid #c2410c; padding: 1rem 1.2rem; margin-bottom: 1rem; font-size: 1.05rem; line-height: 1.8; color: #1e293b; border-radius: 0.5rem; }
 
   .quiz-question { font-size: 1rem; font-weight: 600; margin-bottom: 0.8rem; color: #4e5968; }
   .quiz-sentence { background: #f7f8fa; padding: 1rem 1.2rem; border-radius: 12px; font-size: 1.08rem; text-align: center; margin-bottom: 1rem; border: none; line-height: 1.6; position: relative; }
@@ -676,9 +678,11 @@ function renderApp(subject) {
       const renderer = RENDERERS[qt.templateId];
       if (renderer) {
         renderer(containerId, qs, d);
+      } else if (qs.length) {
+        renderCustomQuiz(containerId, qs, d, qt);
       } else {
         document.getElementById(containerId).innerHTML =
-          '<p style="color:#999;text-align:center;padding:2rem;">지원하지 않는 문제 유형입니다.</p>';
+          '<p style="color:#999;text-align:center;padding:2rem;">문제가 없습니다.</p>';
       }
     });
   });
@@ -785,7 +789,8 @@ const RENDERERS = {
   'vocabulary': renderVocabulary,
   'true-false': renderTrueFalse,
   'ordering': renderOrdering,
-  'matching': renderMatching
+  'matching': renderMatching,
+  'reading-comprehension': renderReadingComprehension
 };
 
 // ── 1. 객관식 (Multiple Choice) ────────────────────────────────
@@ -1292,6 +1297,236 @@ function renderMatching(containerId, questions, dayInfo) {
 
     document.getElementById('nb-' + containerId).addEventListener('click', () => {
       current++; render();
+    });
+  }
+  render();
+}
+
+// ── 7. 구문독해 (Reading Comprehension) ──────────────────────
+function renderReadingComprehension(containerId, questions, dayInfo) {
+  if (!questions.length) {
+    document.getElementById(containerId).innerHTML = '<p style="color:#999;text-align:center;">문제가 없습니다.</p>';
+    return;
+  }
+  let current = 0, score = 0, answered = false;
+  const wrongList = [];
+  const wrongDetails = [];
+
+  function render() {
+    const el = document.getElementById(containerId);
+    if (current >= questions.length) {
+      const pct = Math.round(score / questions.length * 100);
+      el.innerHTML = `<div class="result">
+        <div class="emoji">${resultEmoji(score, questions.length)}</div>
+        <div class="score">${score}<span>/${questions.length}</span></div>
+        <div class="msg">${resultMsg(score, questions.length)} (정답률 ${pct}%)</div>
+        <div class="submit-status sending" id="ss-${containerId}">결과 저장 중...</div>
+        <button class="retry-btn">다시 풀기</button>
+        ${renderWrongReview(wrongDetails, containerId)}
+      </div>`;
+      bindReviewToggle(containerId);
+      submitResult(dayInfo.id, 'reading-comprehension', score, questions.length, wrongList.join(' | ')).then(ok => {
+        const ss = document.getElementById('ss-' + containerId);
+        if (ss) { ss.className = 'submit-status ' + (ok ? 'sent' : 'failed'); ss.textContent = ok ? '결과가 저장되었습니다' : '결과 저장 실패'; }
+      });
+      el.querySelector('.retry-btn').onclick = () => { current = 0; score = 0; answered = false; wrongList.length = 0; wrongDetails.length = 0; render(); };
+      return;
+    }
+    const q = questions[current].data;
+    const opts = q.options || [];
+    el.innerHTML = `
+      <div class="quiz-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width:${current/questions.length*100}%"></div></div>
+        <span class="progress-text">${current+1}/${questions.length}</span>
+      </div>
+      <div class="card">
+        <span class="quiz-type-tag reading">구문독해</span>
+        <div class="rc-passage">${q.passage} ${ttsButton(q.passage)}</div>
+        <div class="quiz-question">${q.question || '이 문장의 올바른 해석을 고르세요.'}</div>
+        <div class="options">
+          ${opts.map((opt,i) => `<button class="option-btn" data-idx="${i}">${String.fromCharCode(65+i)}. ${opt}</button>`).join('')}
+        </div>
+        <div class="feedback" id="fb-${containerId}"></div>
+        <button class="next-btn" id="nb-${containerId}">${current+1 < questions.length ? '다음 문제 →' : '결과 보기'}</button>
+      </div>`;
+
+    el.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        const idx = parseInt(btn.dataset.idx);
+        const correct = idx === q.correctIndex;
+        const fb = document.getElementById('fb-' + containerId);
+
+        el.querySelectorAll('.option-btn').forEach(b => {
+          b.classList.add('disabled');
+          if (parseInt(b.dataset.idx) === q.correctIndex) b.classList.add('correct');
+        });
+
+        if (correct) {
+          score++;
+          btn.classList.add('correct');
+          fb.className = 'feedback show correct';
+          fb.innerHTML = '✓ 정답!';
+        } else {
+          btn.classList.add('wrong');
+          fb.className = 'feedback show wrong';
+          fb.innerHTML = `✗ 오답 — 정답: ${String.fromCharCode(65 + q.correctIndex)}. ${opts[q.correctIndex]}`;
+          wrongList.push(q.passage?.slice(0, 40) + '…');
+          wrongDetails.push({ question: q.passage, answer: opts[q.correctIndex], hint: q.explanation || '' });
+        }
+        if (q.explanation) {
+          fb.innerHTML += `<div style="margin-top:0.5rem;font-size:0.85rem;color:#64748b;">💡 ${q.explanation}</div>`;
+        }
+        document.getElementById('nb-' + containerId).classList.add('show');
+      });
+    });
+
+    document.getElementById('nb-' + containerId).addEventListener('click', () => {
+      current++; answered = false; render();
+    });
+  }
+  render();
+}
+
+// ── 8. 커스텀 유형 (Custom fallback) ─────────────────────────
+function renderCustomQuiz(containerId, questions, dayInfo, qtInfo) {
+  if (!questions.length) {
+    document.getElementById(containerId).innerHTML = '<p style="color:#999;text-align:center;">문제가 없습니다.</p>';
+    return;
+  }
+  const label = qtInfo?.label || qtInfo?.templateId || '커스텀';
+  let current = 0, score = 0, answered = false;
+  const wrongList = [];
+  const wrongDetails = [];
+
+  function render() {
+    const el = document.getElementById(containerId);
+    if (current >= questions.length) {
+      const pct = Math.round(score / questions.length * 100);
+      el.innerHTML = `<div class="result">
+        <div class="emoji">${resultEmoji(score, questions.length)}</div>
+        <div class="score">${score}<span>/${questions.length}</span></div>
+        <div class="msg">${resultMsg(score, questions.length)} (정답률 ${pct}%)</div>
+        <div class="submit-status sending" id="ss-${containerId}">결과 저장 중...</div>
+        <button class="retry-btn">다시 풀기</button>
+        ${renderWrongReview(wrongDetails, containerId)}
+      </div>`;
+      bindReviewToggle(containerId);
+      submitResult(dayInfo.id, qtInfo.templateId, score, questions.length, wrongList.join(' | ')).then(ok => {
+        const ss = document.getElementById('ss-' + containerId);
+        if (ss) { ss.className = 'submit-status ' + (ok ? 'sent' : 'failed'); ss.textContent = ok ? '결과가 저장되었습니다' : '결과 저장 실패'; }
+      });
+      el.querySelector('.retry-btn').onclick = () => { current = 0; score = 0; answered = false; wrongList.length = 0; wrongDetails.length = 0; render(); };
+      return;
+    }
+    const q = questions[current].data;
+
+    // 객관식 구조 (options 배열이 있는 경우)
+    if (q.options && q.options.length) {
+      const passage = q.passage ? `<div class="rc-passage">${q.passage} ${ttsButton(q.passage)}</div>` : '';
+      const sentence = q.question ? `<div class="quiz-sentence">${q.question} ${!q.passage ? ttsButton(q.question) : ''}</div>` : '';
+      const prompt = q.prompt ? `<div class="quiz-question">${q.prompt}</div>` : '';
+      el.innerHTML = `
+        <div class="quiz-progress">
+          <div class="progress-bar"><div class="progress-fill" style="width:${current/questions.length*100}%"></div></div>
+          <span class="progress-text">${current+1}/${questions.length}</span>
+        </div>
+        <div class="card">
+          <span class="quiz-type-tag" style="display:inline-block;background:#f1f5f9;color:#475569;">${label}</span>
+          ${passage}${prompt}${sentence}
+          <div class="options">
+            ${q.options.map((opt,i) => `<button class="option-btn" data-idx="${i}">${String.fromCharCode(65+i)}. ${opt}</button>`).join('')}
+          </div>
+          <div class="feedback" id="fb-${containerId}"></div>
+          <button class="next-btn" id="nb-${containerId}">${current+1 < questions.length ? '다음 문제 →' : '결과 보기'}</button>
+        </div>`;
+
+      el.querySelectorAll('.option-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (answered) return;
+          answered = true;
+          const idx = parseInt(btn.dataset.idx);
+          const correct = idx === q.correctIndex;
+          const fb = document.getElementById('fb-' + containerId);
+          el.querySelectorAll('.option-btn').forEach(b => {
+            b.classList.add('disabled');
+            if (parseInt(b.dataset.idx) === q.correctIndex) b.classList.add('correct');
+          });
+          if (correct) {
+            score++; btn.classList.add('correct');
+            fb.className = 'feedback show correct'; fb.innerHTML = '✓ 정답!';
+          } else {
+            btn.classList.add('wrong');
+            fb.className = 'feedback show wrong';
+            fb.innerHTML = `✗ 오답 — 정답: ${String.fromCharCode(65 + q.correctIndex)}. ${q.options[q.correctIndex]}`;
+            wrongList.push((q.question || q.passage || '').slice(0, 40));
+            wrongDetails.push({ question: q.question || q.passage || '', answer: q.options[q.correctIndex], hint: q.explanation || '' });
+          }
+          if (q.explanation) fb.innerHTML += `<div style="margin-top:0.5rem;font-size:0.85rem;color:#64748b;">💡 ${q.explanation}</div>`;
+          document.getElementById('nb-' + containerId).classList.add('show');
+        });
+      });
+    }
+    // 빈칸채우기 구조 (acceptedAnswers가 있는 경우)
+    else if (q.acceptedAnswers && q.acceptedAnswers.length) {
+      el.innerHTML = `
+        <div class="quiz-progress">
+          <div class="progress-bar"><div class="progress-fill" style="width:${current/questions.length*100}%"></div></div>
+          <span class="progress-text">${current+1}/${questions.length}</span>
+        </div>
+        <div class="card">
+          <span class="quiz-type-tag" style="display:inline-block;background:#f1f5f9;color:#475569;">${label}</span>
+          ${q.prompt ? `<div class="quiz-question">${q.prompt}</div>` : ''}
+          ${q.template ? `<div class="quiz-sentence">${q.template} ${ttsButton(q.template)}</div>` : ''}
+          <div style="margin-top:0.8rem;"><input type="text" class="write-input" id="ans-${containerId}" placeholder="정답 입력" autocomplete="off" /></div>
+          <button class="submit-btn" id="sb-${containerId}">제출</button>
+          <div class="feedback" id="fb-${containerId}"></div>
+          <button class="next-btn" id="nb-${containerId}">${current+1 < questions.length ? '다음 문제 →' : '결과 보기'}</button>
+        </div>`;
+
+      const submitAnswer = () => {
+        if (answered) return;
+        answered = true;
+        const input = document.getElementById('ans-' + containerId);
+        const userAns = input.value.trim().toLowerCase();
+        const accepted = q.acceptedAnswers.map(a => a.toLowerCase());
+        const correct = accepted.includes(userAns);
+        const fb = document.getElementById('fb-' + containerId);
+        input.disabled = true;
+        if (correct) {
+          score++;
+          fb.className = 'feedback show correct'; fb.innerHTML = '✓ 정답!';
+        } else {
+          fb.className = 'feedback show wrong';
+          fb.innerHTML = `✗ 오답 — 정답: ${q.acceptedAnswers.join(', ')}`;
+          wrongList.push((q.prompt || q.template || '').slice(0, 40));
+          wrongDetails.push({ question: q.prompt || q.template || '', answer: q.acceptedAnswers.join(', '), hint: q.explanation || '' });
+        }
+        if (q.explanation) fb.innerHTML += `<div style="margin-top:0.5rem;font-size:0.85rem;color:#64748b;">💡 ${q.explanation}</div>`;
+        document.getElementById('nb-' + containerId).classList.add('show');
+      };
+      document.getElementById('sb-' + containerId).addEventListener('click', submitAnswer);
+      document.getElementById('ans-' + containerId).addEventListener('keydown', e => { if (e.key === 'Enter') submitAnswer(); });
+    }
+    // 그 외 텍스트 카드 (정답 없는 정보형)
+    else {
+      const content = Object.entries(q).map(([k, v]) => `<div style="margin-bottom:0.5rem;"><strong>${k}</strong>: ${v}</div>`).join('');
+      el.innerHTML = `
+        <div class="quiz-progress">
+          <div class="progress-bar"><div class="progress-fill" style="width:${current/questions.length*100}%"></div></div>
+          <span class="progress-text">${current+1}/${questions.length}</span>
+        </div>
+        <div class="card">
+          <span class="quiz-type-tag" style="display:inline-block;background:#f1f5f9;color:#475569;">${label}</span>
+          ${content}
+          <button class="next-btn show" id="nb-${containerId}">${current+1 < questions.length ? '다음 →' : '완료'}</button>
+        </div>`;
+      score++;
+    }
+
+    document.getElementById('nb-' + containerId).addEventListener('click', () => {
+      current++; answered = false; render();
     });
   }
   render();

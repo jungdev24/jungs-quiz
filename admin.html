@@ -822,15 +822,38 @@ window.addEventListener('hashchange', restoreHash);
 async function loadSubjects() {
   const { data } = await sb.from('subjects').select('*').order('created_at');
   subjects = data || [];
-  // Day 생성 상태 가져오기
-  const { data: days } = await sb.from('days').select('subject_id, ai_generated');
+  // Day 상태 가져오기
+  const { data: days } = await sb.from('days').select('id, subject_id, ai_generated');
   const dayStats = {};
   (days || []).forEach(d => {
-    if (!dayStats[d.subject_id]) dayStats[d.subject_id] = { total: 0, generated: 0 };
+    if (!dayStats[d.subject_id]) dayStats[d.subject_id] = { total: 0, generated: 0, dayIds: [] };
     dayStats[d.subject_id].total++;
     if (d.ai_generated) dayStats[d.subject_id].generated++;
+    dayStats[d.subject_id].dayIds.push(d.id);
   });
-  subjects.forEach(s => { s._dayStats = dayStats[s.id] || { total: 0, generated: 0 }; });
+  // 과목별 유형별 미생성 체크 (limit 문제 회피: 과목별 개별 count 쿼리)
+  for (const s of subjects) {
+    const ds = dayStats[s.id] || { total: 0, generated: 0, dayIds: [] };
+    const qt = (s.quiz_types || []).map(t => t.templateId);
+    let missingTypes = 0, totalChecks = 0;
+    if (ds.dayIds.length > 0 && qt.length > 0) {
+      for (const tid of qt) {
+        const { count } = await sb.from('questions').select('*', { count: 'exact', head: true }).in('day_id', ds.dayIds).eq('template_id', tid);
+        const expectedDays = ds.dayIds.length;
+        // count가 0이면 전체 Day 미생성, count > 0이면 일부/전부 생성
+        if (count === 0) { missingTypes += expectedDays; totalChecks += expectedDays; }
+        else {
+          // 개별 Day 체크는 비용이 크므로, count/10 으로 대략 추정하여 전부 생성된 것으로 처리
+          totalChecks += expectedDays;
+          // 문제 수가 expectedDays * 5 미만이면 일부 미생성으로 판단
+          if (count < expectedDays * 5) missingTypes += Math.max(0, expectedDays - Math.floor(count / 5));
+        }
+      }
+    }
+    ds.missingTypes = missingTypes;
+    ds.totalChecks = totalChecks;
+    s._dayStats = ds;
+  }
   renderSubjectsList();
 }
 
@@ -839,9 +862,19 @@ function renderSubjectsList() {
   if (!subjects.length) { el.innerHTML = '<p style="color:#8b95a1;">등록된 과목이 없습니다.</p>'; return; }
   el.innerHTML = subjects.map(s => {
     const ds = s._dayStats;
-    const genLabel = ds.total === 0 ? '<span style="display:inline-block;padding:0.15rem 0.5rem;background:#f2f4f6;border-radius:999px;font-size:0.75rem;color:#8b95a1;">미등록</span>'
-      : ds.generated === ds.total ? `<span style="display:inline-block;padding:0.15rem 0.6rem;background:#f0fdf4;border-radius:999px;font-size:0.75rem;color:#16a34a;font-weight:600;">${ds.generated}/${ds.total} 완료</span>`
-      : `<span style="display:inline-block;padding:0.15rem 0.6rem;background:#fef3c7;border-radius:999px;font-size:0.75rem;color:#b45309;font-weight:600;">${ds.generated}/${ds.total} 대기</span>`;
+    const tagStyle = 'display:inline-block;padding:0.15rem 0.6rem;border-radius:999px;font-size:0.75rem;font-weight:600;';
+    let genLabel;
+    if (ds.total === 0) {
+      genLabel = `<span style="${tagStyle}background:#f2f4f6;color:#8b95a1;">Day 미등록</span>`;
+    } else if (ds.missingTypes === 0 && ds.generated === ds.total) {
+      genLabel = `<span style="${tagStyle}background:#f0fdf4;color:#16a34a;">생성완료 ${ds.total}일</span>`;
+    } else if (ds.missingTypes > 0 && ds.generated === ds.total) {
+      genLabel = `<span style="${tagStyle}background:#ede9fe;color:#7c3aed;">추가필요 ${ds.missingTypes}건</span>`;
+    } else if (ds.generated > 0) {
+      genLabel = `<span style="${tagStyle}background:#fef3c7;color:#b45309;">생성중 ${ds.generated}/${ds.total}일</span>`;
+    } else {
+      genLabel = `<span style="${tagStyle}background:#fce7f3;color:#db2777;">미생성 ${ds.total}일</span>`;
+    }
     return `<div style="padding:0.7rem 0;border-bottom:1px solid #f2f4f6;${s.is_active ? '' : 'opacity:0.5;'}">
       <div style="display:flex;justify-content:space-between;align-items:start;gap:0.8rem;">
         <div style="flex:1;min-width:0;">
@@ -998,9 +1031,18 @@ document.getElementById('subj-add-btn').addEventListener('click', async () => {
     if (error) { toast('수정 실패: ' + error.message, 'error'); return; }
     toast('과목이 수정되었습니다.', 'success');
   } else {
-    const { error } = await sb.from('subjects').insert(payload);
+    const { data: newSubject, error } = await sb.from('subjects').insert(payload).select().single();
     if (error) { toast('추가 실패: ' + error.message, 'error'); return; }
-    toast('과목이 추가되었습니다.', 'success');
+    // 과목 생성 시 default_days만큼 Day 자동 생성
+    if (defaultDays > 0) {
+      const dayRows = [];
+      for (let i = 1; i <= defaultDays; i++) {
+        dayRows.push({ subject_id: newSubject.id, day_number: i, title: `Day ${i}`, sort_order: i });
+      }
+      const { error: dErr } = await sb.from('days').insert(dayRows);
+      if (dErr) { toast(`과목은 추가됐지만 Day 생성 실패: ${dErr.message}`, 'error'); }
+    }
+    toast(`과목이 추가되었습니다. (Day ${defaultDays}개 생성)`, 'success');
   }
 
   resetSubjectForm();

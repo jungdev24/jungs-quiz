@@ -1136,6 +1136,7 @@ function renderOrdering(containerId, questions, dayInfo) {
       `).join('');
 
       orderContainer.querySelectorAll('.order-item').forEach(el => {
+        // Desktop drag
         el.addEventListener('dragstart', e => {
           dragIdx = parseInt(el.dataset.idx);
           el.classList.add('dragging');
@@ -1153,6 +1154,34 @@ function renderOrdering(containerId, questions, dayInfo) {
             userOrder.splice(dropIdx, 0, item);
             renderItems();
           }
+        });
+        // Mobile touch
+        let touchStartY = 0;
+        let touchIdx = null;
+        el.addEventListener('touchstart', e => {
+          touchIdx = parseInt(el.dataset.idx);
+          touchStartY = e.touches[0].clientY;
+          el.classList.add('dragging');
+        }, { passive: true });
+        el.addEventListener('touchmove', e => {
+          e.preventDefault();
+        }, { passive: false });
+        el.addEventListener('touchend', e => {
+          el.classList.remove('dragging');
+          if (touchIdx === null) return;
+          const touchEndY = e.changedTouches[0].clientY;
+          const items = orderContainer.querySelectorAll('.order-item');
+          let dropIdx = touchIdx;
+          items.forEach((item, idx) => {
+            const rect = item.getBoundingClientRect();
+            if (touchEndY >= rect.top && touchEndY <= rect.bottom) dropIdx = idx;
+          });
+          if (touchIdx !== dropIdx) {
+            const item = userOrder.splice(touchIdx, 1)[0];
+            userOrder.splice(dropIdx, 0, item);
+            renderItems();
+          }
+          touchIdx = null;
         });
       });
     }

@@ -69,6 +69,27 @@ CREATE TABLE settings (
   value TEXT NOT NULL
 );
 
+-- 7. 채팅 메시지 (관리자↔학생)
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  title TEXT DEFAULT '',
+  content TEXT NOT NULL,
+  sender_type TEXT NOT NULL DEFAULT 'admin',
+  sender_name TEXT DEFAULT '',
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 8. 공지사항
+CREATE TABLE notices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content TEXT NOT NULL,
+  subject_id UUID REFERENCES subjects(id) ON DELETE CASCADE,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- ============================================================
 -- 인덱스
 -- ============================================================
@@ -77,6 +98,9 @@ CREATE INDEX idx_questions_day ON questions(day_id);
 CREATE INDEX idx_results_student ON results(student_id);
 CREATE INDEX idx_results_day ON results(day_id);
 CREATE INDEX idx_results_submitted ON results(submitted_at DESC);
+CREATE INDEX idx_messages_student ON messages(student_id);
+CREATE INDEX idx_messages_created ON messages(created_at DESC);
+CREATE INDEX idx_notices_created ON notices(created_at DESC);
 
 -- ============================================================
 -- RLS (Row Level Security)
@@ -88,6 +112,8 @@ ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notices ENABLE ROW LEVEL SECURITY;
 
 -- anon(비인증) 사용자: 읽기 전용
 CREATE POLICY "subjects_read" ON subjects FOR SELECT TO anon USING (is_active = true);
@@ -104,3 +130,12 @@ CREATE POLICY "questions_admin" ON questions FOR ALL TO authenticated USING (tru
 CREATE POLICY "students_admin" ON students FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "results_admin" ON results FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "settings_admin" ON settings FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- 메시지: anon 읽기/쓰기 (학생이 채팅 가능)
+CREATE POLICY "messages_read" ON messages FOR SELECT TO anon USING (true);
+CREATE POLICY "messages_insert" ON messages FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "messages_admin" ON messages FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- 공지: anon 읽기만
+CREATE POLICY "notices_read" ON notices FOR SELECT TO anon USING (is_active = true);
+CREATE POLICY "notices_admin" ON notices FOR ALL TO authenticated USING (true) WITH CHECK (true);

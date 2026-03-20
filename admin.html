@@ -850,6 +850,7 @@ function renderSubjectsList() {
           <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;">
             ${genLabel}
             <button class="btn btn-secondary btn-sm" onclick="copySubjectQuestions('${s.id}')" style="font-size:0.72rem;">문제 복사</button>
+            <button class="btn btn-secondary btn-sm" onclick="duplicateSubject('${s.id}')" style="font-size:0.72rem;">과목 복사</button>
             <button class="btn btn-sm" onclick="resetSubjectQuestions('${s.id}')" style="background:#fff;color:#f04452;border:1px solid #fecdd3;font-size:0.72rem;">문제초기화</button>
           </div>
         </div>
@@ -1883,6 +1884,77 @@ window.resetSubjectQuestions = async (subjectId) => {
     loadSubjects();
   } catch (e) {
     toast('초기화 실패: ' + e.message, 'error');
+  }
+};
+
+// ============================================================
+// 과목 복사 (설정 + Day + 문제 전체 복제)
+// ============================================================
+window.duplicateSubject = async (id) => {
+  const src = subjects.find(s => s.id === id);
+  if (!src) return;
+
+  const newName = prompt(`"${src.name}" 과목을 복사합니다.\n새 과목 이름을 입력하세요:`, src.name + ' (복사)');
+  if (!newName || !newName.trim()) return;
+
+  try {
+    toast('과목 복사 중...', 'info');
+
+    // 1. 과목 설정 복제
+    const newSlug = toSlug(newName.trim());
+    const { data: newSubj, error: sErr } = await sb.from('subjects').insert({
+      slug: newSlug,
+      name: newName.trim(),
+      subtitle: src.subtitle || '',
+      quiz_types: src.quiz_types || [],
+      ai_description: src.ai_description || '',
+      ai_files: src.ai_files || [],
+      default_days: src.default_days || 20,
+      default_questions: src.default_questions || 10,
+      is_active: false
+    }).select().single();
+
+    if (sErr) { toast('과목 생성 실패: ' + sErr.message, 'error'); return; }
+
+    // 2. Day + 문제 복제
+    const { data: srcDays } = await sb.from('days')
+      .select('*').eq('subject_id', id).order('sort_order');
+
+    let totalDays = 0, totalQuestions = 0;
+
+    if (srcDays && srcDays.length) {
+      for (const srcDay of srcDays) {
+        const { data: newDay, error: dErr } = await sb.from('days').insert({
+          subject_id: newSubj.id,
+          day_number: srcDay.day_number,
+          title: srcDay.title,
+          lesson: srcDay.lesson,
+          sort_order: srcDay.sort_order,
+          ai_generated: srcDay.ai_generated
+        }).select().single();
+
+        if (dErr) continue;
+        totalDays++;
+
+        const { data: srcQs } = await sb.from('questions')
+          .select('*').eq('day_id', srcDay.id).order('sort_order');
+
+        if (srcQs && srcQs.length) {
+          await sb.from('questions').insert(srcQs.map(q => ({
+            day_id: newDay.id,
+            template_id: q.template_id,
+            data: q.data,
+            sort_order: q.sort_order
+          })));
+          totalQuestions += srcQs.length;
+        }
+      }
+    }
+
+    toast(`과목 복사 완료! (${totalDays}개 Day, ${totalQuestions}개 문제)`, 'success');
+    loadSubjects();
+  } catch (e) {
+    toast('과목 복사 실패: ' + e.message, 'error');
   }
 };
 

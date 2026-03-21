@@ -225,12 +225,14 @@
   @keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
 
   /* ── Ordering Quiz ─────────────────────────────────────── */
-  .order-answer { display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 48px; padding: 0.6rem; background: #f7f8fa; border: 2px dashed #d5dae0; border-radius: 12px; margin-bottom: 1rem; align-items: center; }
+  .order-answer { display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 48px; padding: 0.6rem; background: #f7f8fa; border: 2px dashed #d5dae0; border-radius: 12px; margin-bottom: 1rem; align-items: center; touch-action: manipulation; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
   .order-answer .word-chip { background: #3182f6; color: #fff; border: none; }
   .order-answer .word-chip:hover { background: #1b64da; }
+  .order-answer .word-chip.swap-selected { background: #f59e0b; color: #fff; box-shadow: 0 0 0 3px rgba(245,158,11,0.3); }
   .order-answer-placeholder { color: #b0b8c1; font-size: 0.85rem; width: 100%; text-align: center; padding: 0.3rem; }
-  .word-bank { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; justify-content: center; }
-  .word-chip { display: inline-flex; align-items: center; padding: 0.5rem 1rem; background: #f2f4f6; border: 1px solid #e5e8eb; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #333d4b; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-user-select: none; }
+  .order-answer-hint { color: #8b95a1; font-size: 0.75rem; text-align: center; margin-bottom: 0.5rem; }
+  .word-bank { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; justify-content: center; touch-action: manipulation; }
+  .word-chip { display: inline-flex; align-items: center; padding: 0.5rem 1rem; background: #f2f4f6; border: 1px solid #e5e8eb; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #333d4b; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
   .word-chip:hover { background: #e8f0fe; color: #3182f6; }
   .word-chip:active { transform: scale(0.95); }
   .word-chip.used { opacity: 0.3; pointer-events: none; }
@@ -1130,6 +1132,7 @@ function renderOrdering(containerId, questions, dayInfo) {
         <div class="order-answer" id="oa-${containerId}">
           <span class="order-answer-placeholder">여기에 단어가 채워집니다</span>
         </div>
+        <div class="order-answer-hint" id="oh-${containerId}"></div>
         <div class="word-bank" id="wb-${containerId}"></div>
         <button class="check-btn" id="cb-${containerId}" style="width:100%;" disabled>정답 확인</button>
         <div class="feedback" id="fb-${containerId}"></div>
@@ -1137,32 +1140,60 @@ function renderOrdering(containerId, questions, dayInfo) {
       </div>`;
 
     const answerArea = document.getElementById('oa-' + containerId);
+    const hintArea = document.getElementById('oh-' + containerId);
     const wordBank = document.getElementById('wb-' + containerId);
     const checkBtn = document.getElementById('cb-' + containerId);
+    let swapIdx = null; // 순서 교환용
 
     function renderDuo() {
       // 답 영역
       if (selected.length === 0) {
         answerArea.innerHTML = '<span class="order-answer-placeholder">여기에 단어가 채워집니다</span>';
+        hintArea.textContent = '';
       } else {
-        answerArea.innerHTML = selected.map((w, i) => `<span class="word-chip" data-sel-idx="${i}">${w}</span>`).join('');
+        answerArea.innerHTML = selected.map((w, i) => `<span class="word-chip ${swapIdx === i ? 'swap-selected' : ''}" data-sel-idx="${i}">${w}</span>`).join('');
+        hintArea.textContent = swapIdx !== null ? '교환할 위치를 탭하세요 (길게 누르면 빼기)' : '탭: 순서 교환 · 길게 누르기: 빼기';
         answerArea.querySelectorAll('.word-chip').forEach(chip => {
-          chip.addEventListener('click', () => {
-            const si = parseInt(chip.dataset.selIdx);
-            const word = selected.splice(si, 1)[0];
-            const orig = available.find(a => a.word === word && a.used);
-            if (orig) orig.used = false;
+          let pressTimer = null;
+          const si = parseInt(chip.dataset.selIdx);
+          // 짧은 탭 = 교환
+          chip.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (pressTimer === -1) { pressTimer = null; return; } // 길게 누름 후 무시
+            if (swapIdx === null) {
+              swapIdx = si;
+            } else if (swapIdx === si) {
+              swapIdx = null;
+            } else {
+              [selected[swapIdx], selected[si]] = [selected[si], selected[swapIdx]];
+              swapIdx = null;
+            }
             renderDuo();
           });
+          // 길게 누르기 = 빼기
+          chip.addEventListener('touchstart', (e) => {
+            pressTimer = setTimeout(() => {
+              pressTimer = -1;
+              const word = selected.splice(si, 1)[0];
+              const orig = available.find(a => a.word === word && a.used);
+              if (orig) orig.used = false;
+              swapIdx = null;
+              renderDuo();
+            }, 500);
+          }, { passive: true });
+          chip.addEventListener('touchend', () => { if (pressTimer && pressTimer !== -1) clearTimeout(pressTimer); });
+          chip.addEventListener('touchmove', () => { if (pressTimer && pressTimer !== -1) clearTimeout(pressTimer); });
         });
       }
       // 단어 풀
       wordBank.innerHTML = available.map((a, i) => `<span class="word-chip ${a.used ? 'used' : ''}" data-bank-idx="${i}">${a.word}</span>`).join('');
       wordBank.querySelectorAll('.word-chip:not(.used)').forEach(chip => {
-        chip.addEventListener('click', () => {
+        chip.addEventListener('click', (e) => {
+          e.preventDefault();
           const bi = parseInt(chip.dataset.bankIdx);
           available[bi].used = true;
           selected.push(available[bi].word);
+          swapIdx = null;
           renderDuo();
         });
       });

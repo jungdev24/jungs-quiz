@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Jung's Quiz</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
   body { font-family: 'Pretendard', -apple-system, 'Segoe UI', sans-serif; background: #f7f8fa; color: #191f28; line-height: 1.75; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 
   header { background: #191f28; padding: 0; position: sticky; top: 0; z-index: 100; }
@@ -92,6 +92,7 @@
   .option-btn:disabled { cursor: default; }
 
   .write-area { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
+  input, textarea, select, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   .write-input { flex: 1; padding: 0.75rem 1rem; border: none; background: #f2f4f6; border-radius: 12px; font-size: 1rem; outline: none; transition: all 0.2s; }
   .write-input:focus { background: #e8f0fe; }
   .write-input:disabled { background: #f2f4f6; color: #8b95a1; }

@@ -225,6 +225,15 @@
   @keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
 
   /* ── Ordering Quiz ─────────────────────────────────────── */
+  .order-answer { display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 48px; padding: 0.6rem; background: #f7f8fa; border: 2px dashed #d5dae0; border-radius: 12px; margin-bottom: 1rem; align-items: center; }
+  .order-answer .word-chip { background: #3182f6; color: #fff; border: none; }
+  .order-answer .word-chip:hover { background: #1b64da; }
+  .order-answer-placeholder { color: #b0b8c1; font-size: 0.85rem; width: 100%; text-align: center; padding: 0.3rem; }
+  .word-bank { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; justify-content: center; }
+  .word-chip { display: inline-flex; align-items: center; padding: 0.5rem 1rem; background: #f2f4f6; border: 1px solid #e5e8eb; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #333d4b; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-user-select: none; }
+  .word-chip:hover { background: #e8f0fe; color: #3182f6; }
+  .word-chip:active { transform: scale(0.95); }
+  .word-chip.used { opacity: 0.3; pointer-events: none; }
   .order-items { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
   .order-item {
     display: flex; align-items: center; gap: 0.8rem;
@@ -1107,7 +1116,8 @@ function renderOrdering(containerId, questions, dayInfo) {
       [items[i], items[j]] = [items[j], items[i]];
     }
 
-    let userOrder = [...items];
+    let selected = []; // 답 영역에 넣은 단어들
+    let available = items.map((w, i) => ({ word: w, idx: i, used: false }));
 
     el.innerHTML = `
       <div class="quiz-progress">
@@ -1116,83 +1126,57 @@ function renderOrdering(containerId, questions, dayInfo) {
       </div>
       <div class="card">
         <span class="quiz-type-tag ordering">문장배열</span>
-        <div class="quiz-question">${q.instruction || '올바른 순서로 배열하세요.'}</div>
-        <div class="order-items" id="oi-${containerId}"></div>
-        <button class="check-btn" id="cb-${containerId}" style="width:100%;">정답 확인</button>
+        <div class="quiz-question">${q.instruction || '단어를 탭하여 올바른 순서로 문장을 만드세요.'}</div>
+        <div class="order-answer" id="oa-${containerId}">
+          <span class="order-answer-placeholder">여기에 단어가 채워집니다</span>
+        </div>
+        <div class="word-bank" id="wb-${containerId}"></div>
+        <button class="check-btn" id="cb-${containerId}" style="width:100%;" disabled>정답 확인</button>
         <div class="feedback" id="fb-${containerId}"></div>
         <button class="next-btn" id="nb-${containerId}">${current+1 < questions.length ? '다음 문제 →' : '결과 보기'}</button>
       </div>`;
 
-    const orderContainer = document.getElementById('oi-' + containerId);
-    let dragIdx = null;
+    const answerArea = document.getElementById('oa-' + containerId);
+    const wordBank = document.getElementById('wb-' + containerId);
+    const checkBtn = document.getElementById('cb-' + containerId);
 
-    function renderItems() {
-      orderContainer.innerHTML = userOrder.map((item, i) => `
-        <div class="order-item" draggable="true" data-idx="${i}">
-          <span class="order-num">${i + 1}</span>
-          <span class="order-text">${item}</span>
-          <span class="order-handle">⋮⋮</span>
-        </div>
-      `).join('');
-
-      orderContainer.querySelectorAll('.order-item').forEach(el => {
-        // Desktop drag
-        el.addEventListener('dragstart', e => {
-          dragIdx = parseInt(el.dataset.idx);
-          el.classList.add('dragging');
-        });
-        el.addEventListener('dragend', () => {
-          el.classList.remove('dragging');
-          dragIdx = null;
-        });
-        el.addEventListener('dragover', e => e.preventDefault());
-        el.addEventListener('drop', e => {
-          e.preventDefault();
-          const dropIdx = parseInt(el.dataset.idx);
-          if (dragIdx !== null && dragIdx !== dropIdx) {
-            const item = userOrder.splice(dragIdx, 1)[0];
-            userOrder.splice(dropIdx, 0, item);
-            renderItems();
-          }
-        });
-        // Mobile touch
-        let touchStartY = 0;
-        let touchIdx = null;
-        el.addEventListener('touchstart', e => {
-          touchIdx = parseInt(el.dataset.idx);
-          touchStartY = e.touches[0].clientY;
-          el.classList.add('dragging');
-        }, { passive: true });
-        el.addEventListener('touchmove', e => {
-          e.preventDefault();
-        }, { passive: false });
-        el.addEventListener('touchend', e => {
-          el.classList.remove('dragging');
-          if (touchIdx === null) return;
-          const touchEndY = e.changedTouches[0].clientY;
-          const items = orderContainer.querySelectorAll('.order-item');
-          let dropIdx = touchIdx;
-          items.forEach((item, idx) => {
-            const rect = item.getBoundingClientRect();
-            if (touchEndY >= rect.top && touchEndY <= rect.bottom) dropIdx = idx;
+    function renderDuo() {
+      // 답 영역
+      if (selected.length === 0) {
+        answerArea.innerHTML = '<span class="order-answer-placeholder">여기에 단어가 채워집니다</span>';
+      } else {
+        answerArea.innerHTML = selected.map((w, i) => `<span class="word-chip" data-sel-idx="${i}">${w}</span>`).join('');
+        answerArea.querySelectorAll('.word-chip').forEach(chip => {
+          chip.addEventListener('click', () => {
+            const si = parseInt(chip.dataset.selIdx);
+            const word = selected.splice(si, 1)[0];
+            const orig = available.find(a => a.word === word && a.used);
+            if (orig) orig.used = false;
+            renderDuo();
           });
-          if (touchIdx !== dropIdx) {
-            const item = userOrder.splice(touchIdx, 1)[0];
-            userOrder.splice(dropIdx, 0, item);
-            renderItems();
-          }
-          touchIdx = null;
+        });
+      }
+      // 단어 풀
+      wordBank.innerHTML = available.map((a, i) => `<span class="word-chip ${a.used ? 'used' : ''}" data-bank-idx="${i}">${a.word}</span>`).join('');
+      wordBank.querySelectorAll('.word-chip:not(.used)').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const bi = parseInt(chip.dataset.bankIdx);
+          available[bi].used = true;
+          selected.push(available[bi].word);
+          renderDuo();
         });
       });
+      // 확인 버튼 활성화
+      checkBtn.disabled = selected.length !== items.length;
     }
-    renderItems();
+    renderDuo();
 
-    document.getElementById('cb-' + containerId).addEventListener('click', () => {
+    checkBtn.addEventListener('click', () => {
       const correctOrder = q.correctOrder || q.items || [];
-      const isCorrect = userOrder.every((item, i) => item === correctOrder[i]);
+      const isCorrect = selected.every((item, i) => item === correctOrder[i]);
       if (isCorrect) score++;
       else {
-        const correctStr = correctOrder.join(' → ');
+        const correctStr = correctOrder.join(' ');
         wrongList.push(correctStr);
         wrongDetails.push({ question: q.instruction || '순서 배열', answer: correctStr, hint: '', fullSentence: correctOrder.join(' ') });
       }
@@ -1201,10 +1185,12 @@ function renderOrdering(containerId, questions, dayInfo) {
       fb.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
       fb.innerHTML = isCorrect
         ? '✓ 정답! 올바른 순서입니다.'
-        : `✗ 오답. 올바른 순서: <strong>${(q.correctOrder || q.items || []).join(' → ')}</strong>`;
-      document.getElementById('cb-' + containerId).disabled = true;
+        : `✗ 오답. 올바른 순서: <strong>${(q.correctOrder || q.items || []).join(' ')}</strong>`;
+      checkBtn.disabled = true;
       document.getElementById('nb-' + containerId).classList.add('show');
-      orderContainer.querySelectorAll('.order-item').forEach(el => el.setAttribute('draggable', 'false'));
+      // 답 영역/단어풀 비활성화
+      answerArea.querySelectorAll('.word-chip').forEach(c => { c.style.pointerEvents = 'none'; });
+      wordBank.querySelectorAll('.word-chip').forEach(c => { c.style.pointerEvents = 'none'; });
     });
 
     document.getElementById('nb-' + containerId).addEventListener('click', () => {

@@ -225,14 +225,14 @@
   @keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
 
   /* ── Ordering Quiz ─────────────────────────────────────── */
-  .order-answer { display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 48px; padding: 0.6rem; background: #f7f8fa; border: 2px dashed #d5dae0; border-radius: 12px; margin-bottom: 1rem; align-items: center; touch-action: manipulation; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .order-answer { display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 48px; padding: 0.6rem; background: #f7f8fa; border: 2px dashed #d5dae0; border-radius: 12px; margin-bottom: 1rem; align-items: center; touch-action: manipulation; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   .order-answer .word-chip { background: #3182f6; color: #fff; border: none; }
   .order-answer .word-chip:hover { background: #1b64da; }
   .order-answer .word-chip.swap-selected { background: #f59e0b; color: #fff; box-shadow: 0 0 0 3px rgba(245,158,11,0.3); }
   .order-answer-placeholder { color: #b0b8c1; font-size: 0.85rem; width: 100%; text-align: center; padding: 0.3rem; }
   .order-answer-hint { color: #8b95a1; font-size: 0.75rem; text-align: center; margin-bottom: 0.5rem; }
-  .word-bank { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; justify-content: center; touch-action: manipulation; }
-  .word-chip { display: inline-flex; align-items: center; padding: 0.45rem 0.8rem; background: #f2f4f6; border: 1px solid #e5e8eb; border-radius: 10px; font-size: 0.85rem; font-weight: 600; color: #333d4b; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-user-select: none; touch-action: manipulation; max-width: 100%; word-break: break-word; }
+  .word-bank { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; justify-content: center; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .word-chip { display: inline-flex; align-items: center; padding: 0.45rem 0.8rem; background: #f2f4f6; border: 1px solid #e5e8eb; border-radius: 10px; font-size: 0.85rem; font-weight: 600; color: #333d4b; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; max-width: 100%; word-break: break-word; }
   .word-chip:hover { background: #e8f0fe; color: #3182f6; }
   .word-chip:active { transform: scale(0.95); }
   .word-chip.used { opacity: 0.3; pointer-events: none; }

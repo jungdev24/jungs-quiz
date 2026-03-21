@@ -6,7 +6,7 @@
 <title>Jung's Quiz</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Pretendard', -apple-system, 'Segoe UI', sans-serif; background: #f7f8fa; color: #191f28; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+  body { font-family: 'Pretendard', -apple-system, 'Segoe UI', sans-serif; background: #f7f8fa; color: #191f28; line-height: 1.75; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 
   header { background: #191f28; padding: 0; position: sticky; top: 0; z-index: 100; }
   .header-top { display: flex; align-items: center; justify-content: space-between; max-width: 820px; margin: 0 auto; padding: 0 1rem; }
@@ -62,7 +62,7 @@
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
-  .card { background: #fff; border-radius: 16px; padding: 1.6rem; margin-bottom: 1.2rem; box-shadow: 0 1px 8px rgba(0,0,0,0.04); border: none; }
+  .card { background: #fff; border-radius: 16px; padding: 1.6rem; margin-bottom: 1.2rem; box-shadow: 0 1px 8px rgba(0,0,0,0.04); border: none; overflow: hidden; }
 
   .quiz-progress { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; }
   .progress-bar { flex: 1; height: 6px; background: #f2f4f6; border-radius: 999px; overflow: hidden; }
@@ -232,7 +232,7 @@
   .order-answer-placeholder { color: #b0b8c1; font-size: 0.85rem; width: 100%; text-align: center; padding: 0.3rem; }
   .order-answer-hint { color: #8b95a1; font-size: 0.75rem; text-align: center; margin-bottom: 0.5rem; }
   .word-bank { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; justify-content: center; touch-action: manipulation; }
-  .word-chip { display: inline-flex; align-items: center; padding: 0.5rem 1rem; background: #f2f4f6; border: 1px solid #e5e8eb; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #333d4b; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  .word-chip { display: inline-flex; align-items: center; padding: 0.45rem 0.8rem; background: #f2f4f6; border: 1px solid #e5e8eb; border-radius: 10px; font-size: 0.85rem; font-weight: 600; color: #333d4b; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-user-select: none; touch-action: manipulation; max-width: 100%; word-break: break-word; }
   .word-chip:hover { background: #e8f0fe; color: #3182f6; }
   .word-chip:active { transform: scale(0.95); }
   .word-chip.used { opacity: 0.3; pointer-events: none; }
